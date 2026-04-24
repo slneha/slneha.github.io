@@ -183,6 +183,11 @@ class Media {
   speed: number = 0;
   isBefore: boolean = false;
   isAfter: boolean = false;
+  hoverTarget: number = 0;
+  hoverCurrent: number = 0;
+  baseScaleX: number = 1;
+  baseScaleY: number = 1;
+  baseRotZ: number = 0;
 
   constructor({
     geometry,
@@ -222,7 +227,9 @@ class Media {
 
   createShader() {
     const texture = new Texture(this.gl, {
-      generateMipmaps: true
+      generateMipmaps: true,
+      minFilter: this.gl.LINEAR_MIPMAP_LINEAR,
+      magFilter: this.gl.LINEAR
     });
     this.program = new Program(this.gl, {
       depthTest: false,
@@ -284,6 +291,16 @@ class Media {
     img.src = this.image;
     img.onload = () => {
       texture.image = img;
+      // Anisotropic filtering for sharp text at oblique angles
+      const ext =
+        this.gl.getExtension('EXT_texture_filter_anisotropic') ||
+        this.gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+        this.gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+      if (ext) {
+        const max = this.gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, (texture as any).texture);
+        this.gl.texParameterf(this.gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
+      }
       this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
     };
   }
@@ -315,7 +332,7 @@ class Media {
 
     if (this.bend === 0) {
       this.plane.position.y = 0;
-      this.plane.rotation.z = 0;
+      this.baseRotZ = 0;
     } else {
       const B_abs = Math.abs(this.bend);
       const R = (H * H + B_abs * B_abs) / (2 * B_abs);
@@ -324,16 +341,24 @@ class Media {
       const arc = R - Math.sqrt(R * R - effectiveX * effectiveX);
       if (this.bend > 0) {
         this.plane.position.y = -arc;
-        this.plane.rotation.z = -Math.sign(x) * Math.asin(effectiveX / R);
+        this.baseRotZ = -Math.sign(x) * Math.asin(effectiveX / R);
       } else {
         this.plane.position.y = arc;
-        this.plane.rotation.z = Math.sign(x) * Math.asin(effectiveX / R);
+        this.baseRotZ = Math.sign(x) * Math.asin(effectiveX / R);
       }
     }
 
+    // Smoothly approach hover state
+    this.hoverCurrent = lerp(this.hoverCurrent, this.hoverTarget, 0.12);
+    const hoverScale = 1 + this.hoverCurrent * 0.06;
+    const hoverTilt = this.hoverCurrent * 0.18; // ~10deg in radians
+    this.plane.scale.x = this.baseScaleX * hoverScale;
+    this.plane.scale.y = this.baseScaleY * hoverScale;
+    this.plane.rotation.z = this.baseRotZ + hoverTilt;
+
     this.speed = scroll.current - scroll.last;
 
-    const planeOffset = this.plane.scale.x / 2;
+    const planeOffset = this.baseScaleX / 2;
     const viewportOffset = this.viewport.width / 2;
     this.isBefore = this.plane.position.x + planeOffset < -viewportOffset;
     this.isAfter = this.plane.position.x - planeOffset > viewportOffset;
@@ -356,11 +381,13 @@ class Media {
       }
     }
     this.scale = this.screen.height / 1500;
-    this.plane.scale.y = (this.viewport.height * (900 * this.scale)) / this.screen.height;
-    this.plane.scale.x = (this.viewport.width * (700 * this.scale)) / this.screen.width;
-    this.plane.program.uniforms.uPlaneSizes.value = [this.plane.scale.x, this.plane.scale.y];
-    this.padding = 2;
-    this.width = this.plane.scale.x + this.padding;
+    this.baseScaleY = (this.viewport.height * (1200 * this.scale)) / this.screen.height;
+    this.baseScaleX = (this.viewport.width * (950 * this.scale)) / this.screen.width;
+    this.plane.scale.y = this.baseScaleY;
+    this.plane.scale.x = this.baseScaleX;
+    this.plane.program.uniforms.uPlaneSizes.value = [this.baseScaleX, this.baseScaleY];
+    this.padding = 2.4;
+    this.width = this.baseScaleX + this.padding;
     this.widthTotal = this.width * this.length;
     this.x = this.width * this.index;
   }
