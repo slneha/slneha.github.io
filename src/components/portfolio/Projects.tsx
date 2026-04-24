@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Section } from "./Section";
-import { CometCard } from "@/components/ui/comet-card";
+import CircularGallery from "@/components/CircularGallery";
 
 type Cat = "ALL" | "ML" | "CLOUD" | "NLP" | "SECURITY";
 type ShapeKind = "scatter" | "bar" | "wave" | "hex" | "nodes";
@@ -57,63 +57,31 @@ const projects: Project[] = [
   },
 ];
 
-/* ---------- Animated shapes ---------- */
+/* ---------- SVG shape generators (static markup for the tile texture) ---------- */
 
-function ScatterShape() {
-  // 28 dots that twinkle on independent intervals via CSS vars
-  return (
-    <svg viewBox="0 0 200 80" width="100%" height="100" aria-hidden>
-      {Array.from({ length: 28 }).map((_, i) => {
-        const x = (i * 37) % 200;
-        const y = ((i * 53) % 70) + 5;
-        const r = 1.5 + (i % 3);
-        const dur = 1.6 + (i % 5) * 0.4;
-        const delay = (i % 7) * 0.15;
-        return (
-          <circle
-            key={i}
-            cx={x}
-            cy={y}
-            r={r}
-            fill={i % 4 === 0 ? "var(--accent-primary)" : "var(--accent-secondary)"}
-            style={{
-              animation: `twinkle ${dur}s ease-in-out ${delay}s infinite`,
-              transformOrigin: `${x}px ${y}px`,
-            }}
-          />
-        );
-      })}
-    </svg>
-  );
+function scatterSVG() {
+  let out = "";
+  for (let i = 0; i < 28; i++) {
+    const x = (i * 37) % 200;
+    const y = ((i * 53) % 70) + 5;
+    const r = 1.5 + (i % 3);
+    const fill = i % 4 === 0 ? "#00E5C3" : "#FF7A1A";
+    out += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" opacity="0.85"/>`;
+  }
+  return out;
 }
 
-function BarShape() {
-  // Bars whose heights cycle; each bar has its own staggered keyframe
+function barSVG() {
   const heights = [40, 65, 30, 55, 70, 45, 60, 35, 75, 50];
-  return (
-    <svg viewBox="0 0 200 80" width="100%" height="100" aria-hidden>
-      {heights.map((h, i) => (
-        <rect
-          key={i}
-          x={i * 20 + 4}
-          width="12"
-          fill={i % 2 === 0 ? "var(--accent-primary)" : "var(--accent-secondary)"}
-          opacity="0.8"
-          style={{
-            animation: `barPulse 1.8s ease-in-out ${i * 0.12}s infinite`,
-            transformOrigin: "center bottom",
-            transformBox: "fill-box",
-          }}
-          y={80 - h}
-          height={h}
-        />
-      ))}
-    </svg>
-  );
+  return heights
+    .map((h, i) => {
+      const fill = i % 2 === 0 ? "#00E5C3" : "#FF7A1A";
+      return `<rect x="${i * 20 + 4}" y="${80 - h}" width="12" height="${h}" fill="${fill}" opacity="0.8"/>`;
+    })
+    .join("");
 }
 
-function WaveShape() {
-  // Two overlapping sine waves drifting horizontally — works for audio + TTS vibe
+function waveSVG() {
   const wave = (phase: number, amp: number) =>
     Array.from({ length: 80 })
       .map((_, i) => {
@@ -122,82 +90,33 @@ function WaveShape() {
         return `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
       })
       .join(" ");
-
-  // Vertical voice-bars overlay for a recorder feel
-  const bars = Array.from({ length: 24 });
-
-  return (
-    <svg viewBox="0 0 200 80" width="100%" height="100" aria-hidden>
-      <path
-        d={wave(0, 18)}
-        stroke="var(--accent-primary)"
-        strokeWidth="1.5"
-        fill="none"
-        opacity="0.9"
-        style={{ animation: "waveDrift 3.2s linear infinite" }}
-      />
-      <path
-        d={wave(1.5, 12)}
-        stroke="var(--accent-secondary)"
-        strokeWidth="1"
-        fill="none"
-        opacity="0.5"
-        style={{ animation: "waveDrift 4.5s linear infinite reverse" }}
-      />
-      {bars.map((_, i) => (
-        <rect
-          key={i}
-          x={i * 8 + 2}
-          width="2"
-          fill="var(--accent-primary)"
-          opacity="0.35"
-          style={{
-            animation: `voiceBar 1.${(i % 9) + 1}s ease-in-out ${i * 0.07}s infinite`,
-            transformOrigin: "center center",
-            transformBox: "fill-box",
-          }}
-          y="32"
-          height="16"
-          rx="1"
-        />
-      ))}
-    </svg>
-  );
+  let bars = "";
+  for (let i = 0; i < 24; i++) {
+    bars += `<rect x="${i * 8 + 2}" y="32" width="2" height="16" rx="1" fill="#00E5C3" opacity="0.45"/>`;
+  }
+  return `
+    <path d="${wave(0, 18)}" stroke="#00E5C3" stroke-width="1.5" fill="none" opacity="0.95"/>
+    <path d="${wave(1.5, 12)}" stroke="#FF7A1A" stroke-width="1" fill="none" opacity="0.6"/>
+    ${bars}
+  `;
 }
 
-function HexShape() {
-  // Slowly rotating hex chain
-  return (
-    <svg viewBox="0 0 200 80" width="100%" height="100" aria-hidden>
-      {[20, 60, 100, 140, 180].map((cx, i) => {
-        const pts = Array.from({ length: 6 })
-          .map((_, j) => {
-            const a = (Math.PI / 3) * j;
-            return `${cx + Math.cos(a) * 18},${40 + Math.sin(a) * 18}`;
-          })
-          .join(" ");
-        return (
-          <polygon
-            key={cx}
-            points={pts}
-            fill="none"
-            stroke={i % 2 ? "var(--accent-primary)" : "var(--accent-secondary)"}
-            strokeWidth="1.2"
-            opacity="0.8"
-            style={{
-              animation: `hexSpin ${4 + i}s linear ${i % 2 ? "" : "reverse"} infinite`,
-              transformOrigin: `${cx}px 40px`,
-              transformBox: "fill-box",
-            }}
-          />
-        );
-      })}
-    </svg>
-  );
+function hexSVG() {
+  return [20, 60, 100, 140, 180]
+    .map((cx, i) => {
+      const pts = Array.from({ length: 6 })
+        .map((_, j) => {
+          const a = (Math.PI / 3) * j;
+          return `${cx + Math.cos(a) * 18},${40 + Math.sin(a) * 18}`;
+        })
+        .join(" ");
+      const stroke = i % 2 ? "#00E5C3" : "#FF7A1A";
+      return `<polygon points="${pts}" fill="none" stroke="${stroke}" stroke-width="1.2" opacity="0.85"/>`;
+    })
+    .join("");
 }
 
-function NodesShape() {
-  // Connected nodes pulsing + connection lines that brighten in sequence
+function nodesSVG() {
   const nodes: [number, number][] = [
     [20, 20],
     [60, 60],
@@ -205,152 +124,145 @@ function NodesShape() {
     [140, 55],
     [180, 30],
   ];
-  const edges: [number, number][] = [];
+  let edges = "";
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
-      edges.push([i, j]);
+      const [x1, y1] = nodes[i];
+      const [x2, y2] = nodes[j];
+      edges += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#00E5C3" stroke-width="0.6" opacity="0.45"/>`;
     }
   }
-  return (
-    <svg viewBox="0 0 200 80" width="100%" height="100" aria-hidden>
-      {edges.map(([i, j], k) => {
-        const [x1, y1] = nodes[i];
-        const [x2, y2] = nodes[j];
-        return (
-          <line
-            key={k}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
-            stroke="var(--accent-primary)"
-            strokeWidth="0.6"
-            opacity="0.4"
-            style={{
-              animation: `edgeGlow 3s ease-in-out ${k * 0.2}s infinite`,
-            }}
-          />
-        );
-      })}
-      {nodes.map(([x, y], i) => (
-        <circle
-          key={i}
-          cx={x}
-          cy={y}
-          r="5"
-          fill="var(--accent-primary)"
-          style={{
-            animation: `nodePulse 1.6s ease-in-out ${i * 0.18}s infinite`,
-            transformOrigin: `${x}px ${y}px`,
-            transformBox: "fill-box",
-          }}
-        />
-      ))}
-    </svg>
-  );
+  const pts = nodes
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#00E5C3"/>`)
+    .join("");
+  return edges + pts;
 }
 
-function Shape({ kind }: { kind: ShapeKind }) {
-  if (kind === "scatter") return <ScatterShape />;
-  if (kind === "bar") return <BarShape />;
-  if (kind === "wave") return <WaveShape />;
-  if (kind === "hex") return <HexShape />;
-  return <NodesShape />;
+function shapeMarkup(kind: ShapeKind) {
+  if (kind === "scatter") return scatterSVG();
+  if (kind === "bar") return barSVG();
+  if (kind === "wave") return waveSVG();
+  if (kind === "hex") return hexSVG();
+  return nodesSVG();
+}
+
+/* ---------- Build tile SVG → data URL ---------- */
+
+const TILE_W = 1400;
+const TILE_H = 1800;
+
+function escapeXML(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function wrapText(text: string, maxChars: number, maxLines: number): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    if ((cur + " " + w).trim().length > maxChars) {
+      lines.push(cur.trim());
+      cur = w;
+      if (lines.length === maxLines - 1) break;
+    } else {
+      cur = (cur + " " + w).trim();
+    }
+  }
+  if (cur && lines.length < maxLines) lines.push(cur.trim());
+  if (lines.length === maxLines) {
+    const remaining = words.slice(lines.join(" ").split(/\s+/).length).join(" ");
+    if (remaining) lines[maxLines - 1] = lines[maxLines - 1].replace(/\.+$/, "") + "…";
+  }
+  return lines;
+}
+
+function buildCardSVG(p: Project): string {
+  const titleLines = wrapText(p.title, 22, 2);
+  const descLines = wrapText(p.desc, 38, 4);
+  const tagSpacing = 22;
+  let tagsX = 80;
+  const tags = p.tags
+    .map((t) => {
+      const w = t.length * 14 + 36;
+      const rect = `<rect x="${tagsX}" y="1480" width="${w}" height="46" rx="23" fill="none" stroke="#3a3a3a" stroke-width="1.5"/>
+        <text x="${tagsX + w / 2}" y="1510" font-family="JetBrains Mono, monospace" font-size="22" fill="#a0a0a0" text-anchor="middle" letter-spacing="2">${escapeXML(t)}</text>`;
+      tagsX += w + tagSpacing;
+      return rect;
+    })
+    .join("");
+
+  const badgeText = escapeXML(p.badge);
+  const badgeWidth = badgeText.length * 16 + 60;
+
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TILE_W} ${TILE_H}" width="${TILE_W}" height="${TILE_H}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#161616"/>
+      <stop offset="1" stop-color="#0e0e0e"/>
+    </linearGradient>
+    <linearGradient id="shapeBG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#00E5C3" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#00E5C3" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="${TILE_W}" height="${TILE_H}" rx="40" fill="url(#bg)" stroke="#262626" stroke-width="2"/>
+
+  <!-- Shape area -->
+  <rect x="80" y="100" width="${TILE_W - 160}" height="600" rx="20" fill="url(#shapeBG)"/>
+  <g transform="translate(80, 200) scale(6.2, 4.0)">
+    ${shapeMarkup(p.shape)}
+  </g>
+
+  <!-- Title -->
+  ${titleLines
+    .map(
+      (line, i) =>
+        `<text x="80" y="${900 + i * 110}" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="92" fill="#f5f5f5">${escapeXML(line)}</text>`,
+    )
+    .join("")}
+
+  <!-- Description -->
+  ${descLines
+    .map(
+      (line, i) =>
+        `<text x="80" y="${1180 + i * 56}" font-family="JetBrains Mono, monospace" font-size="38" fill="#a8a8a8">${escapeXML(line)}</text>`,
+    )
+    .join("")}
+
+  <!-- Tags -->
+  ${tags}
+
+  <!-- Badge -->
+  <g transform="translate(${TILE_W - 80 - badgeWidth}, 1620)">
+    <rect width="${badgeWidth}" height="64" rx="6" fill="#FF7A1A"/>
+    <text x="${badgeWidth / 2}" y="42" font-family="JetBrains Mono, monospace" font-size="32" font-weight="500" fill="#1a0d00" text-anchor="middle">${badgeText}</text>
+  </g>
+</svg>`.trim();
+}
+
+function svgToDataURL(svg: string) {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 const filters: Cat[] = ["ALL", "ML", "CLOUD", "NLP", "SECURITY"];
 
 export function Projects() {
   const [active, setActive] = useState<Cat>("ALL");
-  const visible = (p: Project) =>
-    active === "ALL" || p.cats.includes(active as Exclude<Cat, "ALL">);
 
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
-  const rafRef = useRef<number | null>(null);
-
-  // Curve the cards along an arc based on their distance from viewport center.
-  useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-
-    const apply = () => {
-      const sRect = scroller.getBoundingClientRect();
-      const center = sRect.left + sRect.width / 2;
-      const half = sRect.width / 2 || 1;
-      cardRefs.current.forEach((card) => {
-        if (!card) return;
-        const cRect = card.getBoundingClientRect();
-        const cCenter = cRect.left + cRect.width / 2;
-        const t = Math.max(-1.2, Math.min(1.2, (cCenter - center) / half));
-        // Arc: drop & fade outer cards, tilt them inward
-        const lift = -Math.cos(t * (Math.PI / 2)) * 26 + 26; // 0 at center, ~26 at edges
-        const tilt = t * 14; // rotateY in deg
-        const dim = 1 - Math.min(0.5, Math.abs(t) * 0.45);
-        card.style.setProperty("--curve-y", `${lift}px`);
-        card.style.setProperty("--curve-rot", `${tilt}deg`);
-        card.style.setProperty("--curve-opacity", `${dim}`);
-      });
-    };
-
-    const onScroll = () => {
-      if (rafRef.current) return;
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null;
-        apply();
-      });
-    };
-
-    apply();
-    scroller.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", apply);
-
-    // Horizontal wheel routing: only intercept when the user signals horizontal intent
-    // (shift+wheel, trackpad horizontal). Vertical wheel passes through to page scroll.
-    const onWheel = (e: WheelEvent) => {
-      const horizontal = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
-      if (!horizontal) return;
-      e.preventDefault();
-      scroller.scrollLeft += e.deltaX || e.deltaY;
-    };
-    scroller.addEventListener("wheel", onWheel, { passive: false });
-
-    // Click-and-drag to scroll
-    let isDown = false;
-    let startX = 0;
-    let startScroll = 0;
-    const onDown = (e: PointerEvent) => {
-      if (e.pointerType === "mouse" && e.button !== 0) return;
-      isDown = true;
-      startX = e.clientX;
-      startScroll = scroller.scrollLeft;
-      scroller.setPointerCapture(e.pointerId);
-      scroller.style.cursor = "grabbing";
-    };
-    const onMove = (e: PointerEvent) => {
-      if (!isDown) return;
-      scroller.scrollLeft = startScroll - (e.clientX - startX);
-    };
-    const onUp = (e: PointerEvent) => {
-      if (!isDown) return;
-      isDown = false;
-      scroller.releasePointerCapture(e.pointerId);
-      scroller.style.cursor = "grab";
-    };
-    scroller.addEventListener("pointerdown", onDown);
-    scroller.addEventListener("pointermove", onMove);
-    scroller.addEventListener("pointerup", onUp);
-    scroller.addEventListener("pointercancel", onUp);
-
-    return () => {
-      scroller.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", apply);
-      scroller.removeEventListener("wheel", onWheel);
-      scroller.removeEventListener("pointerdown", onDown);
-      scroller.removeEventListener("pointermove", onMove);
-      scroller.removeEventListener("pointerup", onUp);
-      scroller.removeEventListener("pointercancel", onUp);
-    };
+  const items = useMemo(() => {
+    const filtered = projects.filter(
+      (p) =>
+        active === "ALL" || p.cats.includes(active as Exclude<Cat, "ALL">),
+    );
+    return filtered.map((p) => ({
+      image: svgToDataURL(buildCardSVG(p)),
+      text: "",
+    }));
   }, [active]);
 
   return (
@@ -368,148 +280,43 @@ export function Projects() {
       </div>
 
       <div
-        ref={scrollerRef}
-        className="curved-scroller"
         style={{
           marginInline: "calc(50% - 50vw)",
-          paddingInline: "calc(50vw - 180px)",
-          paddingBlock: "60px 40px",
-          overflowX: "auto",
-          overflowY: "hidden",
-          display: "flex",
-          gap: 32,
-          scrollSnapType: "x mandatory",
-          cursor: "grab",
-          perspective: "1400px",
+          height: 640,
+          position: "relative",
         }}
       >
-        {projects.map((p, i) => {
-          const show = visible(p);
-          return (
-            <div
-              key={p.title}
-              ref={(el) => {
-                cardRefs.current[i] = el;
-              }}
-              className="curved-card"
-              style={{
-                flex: "0 0 320px",
-                scrollSnapAlign: "center",
-                transformStyle: "preserve-3d",
-                transform:
-                  "translateY(var(--curve-y, 0px)) rotateY(var(--curve-rot, 0deg))",
-                opacity: `var(--curve-opacity, 1)`,
-                transition:
-                  "transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease",
-                pointerEvents: show ? "auto" : "none",
-                filter: show ? "none" : "grayscale(0.8)",
-              }}
-            >
-              <div
-                style={{
-                  opacity: show ? 1 : 0.15,
-                  transition: "opacity 0.3s ease",
-                  height: "100%",
-                }}
-              >
-                <CometCard rotateDepth={14} translateDepth={14} className="h-full">
-                  <div
-                    style={{
-                      background: "var(--bg-secondary)",
-                      border: "1px solid var(--border-subtle)",
-                      borderRadius: 16,
-                      padding: 24,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 16,
-                      height: "100%",
-                      minHeight: 340,
-                    }}
-                  >
-                    <div
-                      style={{
-                        background:
-                          "linear-gradient(180deg, rgba(0,229,195,0.04), rgba(0,229,195,0.0))",
-                        borderRadius: 10,
-                        padding: "12px 8px",
-                      }}
-                    >
-                      <Shape kind={p.shape} />
-                    </div>
-                    <h3
-                      className="font-display"
-                      style={{
-                        fontSize: "var(--type-card-title)",
-                        fontWeight: 700,
-                        color: "var(--text-primary)",
-                        margin: 0,
-                      }}
-                    >
-                      {p.title}
-                    </h3>
-                    <p
-                      className="font-mono"
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "var(--text-secondary)",
-                        lineHeight: 1.5,
-                        margin: 0,
-                      }}
-                    >
-                      {p.desc}
-                    </p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {p.tags.map((t) => (
-                        <span
-                          key={t}
-                          style={{
-                            fontFamily: "var(--font-mono)",
-                            fontSize: "0.65rem",
-                            padding: "3px 9px",
-                            border: "1px solid var(--border-subtle)",
-                            borderRadius: 999,
-                            color: "var(--text-secondary)",
-                            letterSpacing: "0.08em",
-                          }}
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        marginTop: "auto",
-                      }}
-                    >
-                      <span
-                        style={{
-                          background: "var(--accent-warm)",
-                          color: "#1a0d00",
-                          fontFamily: "var(--font-data)",
-                          fontSize: "0.7rem",
-                          padding: "4px 10px",
-                          borderRadius: 3,
-                          fontWeight: 500,
-                        }}
-                      >
-                        {p.badge}
-                      </span>
-                    </div>
-                  </div>
-                </CometCard>
-              </div>
-            </div>
-          );
-        })}
+        {items.length > 0 ? (
+          <CircularGallery
+            key={active}
+            items={items}
+            bend={2.5}
+            textColor="#ffffff"
+            borderRadius={0.04}
+            scrollEase={0.05}
+          />
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+              color: "var(--text-dim)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.85rem",
+            }}
+          >
+            No projects in this category.
+          </div>
+        )}
       </div>
 
       <div
         style={{
           display: "flex",
           gap: 16,
-          marginTop: 8,
+          marginTop: 16,
           fontFamily: "var(--font-mono)",
           fontSize: "0.7rem",
           color: "var(--text-dim)",
@@ -518,43 +325,9 @@ export function Projects() {
         }}
       >
         <span>← drag</span>
-        <span style={{ color: "var(--accent-primary)" }}>● {projects.length} systems</span>
+        <span style={{ color: "var(--accent-primary)" }}>● {items.length} systems</span>
         <span>scroll →</span>
       </div>
-
-      <style>{`
-        .curved-scroller { scrollbar-width: none; }
-        .curved-scroller::-webkit-scrollbar { display: none; }
-        .curved-card { will-change: transform, opacity; }
-        @keyframes twinkle {
-          0%, 100% { opacity: 0.3; transform: scale(0.9); }
-          50% { opacity: 1; transform: scale(1.4); }
-        }
-        @keyframes barPulse {
-          0%, 100% { transform: scaleY(0.55); }
-          50% { transform: scaleY(1.1); }
-        }
-        @keyframes waveDrift {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-25px); }
-        }
-        @keyframes voiceBar {
-          0%, 100% { transform: scaleY(0.3); opacity: 0.25; }
-          50% { transform: scaleY(2.2); opacity: 0.9; }
-        }
-        @keyframes hexSpin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes nodePulse {
-          0%, 100% { transform: scale(0.85); opacity: 0.7; }
-          50% { transform: scale(1.4); opacity: 1; }
-        }
-        @keyframes edgeGlow {
-          0%, 100% { opacity: 0.2; }
-          50% { opacity: 0.85; }
-        }
-      `}</style>
     </Section>
   );
 }
