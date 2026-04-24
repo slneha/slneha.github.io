@@ -430,6 +430,8 @@ class App {
   boundOnTouchDown!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchMove!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchUp!: () => void;
+  boundOnHoverMove!: (e: MouseEvent) => void;
+  boundOnHoverLeave!: () => void;
 
   isDown: boolean = false;
   start: number = 0;
@@ -608,6 +610,32 @@ class App {
     this.scroll.target = this.scroll.target < 0 ? -item : item;
   }
 
+  onHoverMove(e: MouseEvent) {
+    if (!this.medias || !this.medias.length) return;
+    const rect = this.container.getBoundingClientRect();
+    // Convert pixel x to viewport-units x (same space as plane.position.x).
+    const px = e.clientX - rect.left;
+    const ndcX = (px / rect.width) * 2 - 1;
+    const worldX = (ndcX * this.viewport.width) / 2;
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    this.medias.forEach((m, i) => {
+      const d = Math.abs(m.plane.position.x - worldX);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    });
+    this.medias.forEach((m, i) => {
+      m.hoverTarget = i === bestIdx && bestDist < m.baseScaleX / 2 ? 1 : 0;
+    });
+  }
+
+  onHoverLeave() {
+    if (!this.medias) return;
+    this.medias.forEach(m => (m.hoverTarget = 0));
+  }
+
   onResize() {
     this.screen = {
       width: this.container.clientWidth,
@@ -643,6 +671,8 @@ class App {
     this.boundOnTouchDown = this.onTouchDown.bind(this);
     this.boundOnTouchMove = this.onTouchMove.bind(this);
     this.boundOnTouchUp = this.onTouchUp.bind(this);
+    this.boundOnHoverMove = this.onHoverMove.bind(this);
+    this.boundOnHoverLeave = this.onHoverLeave.bind(this);
     window.addEventListener('resize', this.boundOnResize);
     this.container.addEventListener('wheel', this.boundOnWheel, { passive: false });
     this.container.addEventListener('mousedown', this.boundOnTouchDown);
@@ -651,6 +681,8 @@ class App {
     this.container.addEventListener('touchstart', this.boundOnTouchDown, { passive: true });
     window.addEventListener('touchmove', this.boundOnTouchMove);
     window.addEventListener('touchend', this.boundOnTouchUp);
+    this.container.addEventListener('mousemove', this.boundOnHoverMove);
+    this.container.addEventListener('mouseleave', this.boundOnHoverLeave);
   }
 
   destroy() {
@@ -663,6 +695,8 @@ class App {
     this.container.removeEventListener('touchstart', this.boundOnTouchDown);
     window.removeEventListener('touchmove', this.boundOnTouchMove);
     window.removeEventListener('touchend', this.boundOnTouchUp);
+    this.container.removeEventListener('mousemove', this.boundOnHoverMove);
+    this.container.removeEventListener('mouseleave', this.boundOnHoverLeave);
     if (this.renderer && this.renderer.gl && this.renderer.gl.canvas.parentNode) {
       this.renderer.gl.canvas.parentNode.removeChild(this.renderer.gl.canvas as HTMLCanvasElement);
     }
