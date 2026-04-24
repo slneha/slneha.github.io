@@ -100,50 +100,45 @@ const COLORS = {
 
 /* ----------------------------- Face renderer ---------------------------- */
 
-const FACE_PX = 1024;
+const FACE_PX = 512;
 
-function makeFaceCanvas(face: FaceContent, charsTyped: number, blink: boolean) {
-  const c = document.createElement("canvas");
-  c.width = FACE_PX;
-  c.height = FACE_PX;
-  const ctx = c.getContext("2d")!;
-
+/**
+ * Draws a face directly into a provided 2d context. Reusing the canvas (instead
+ * of allocating a new one each frame) avoids GC pressure and lets Three.js skip
+ * the texture re-upload setup work.
+ */
+function drawFace(
+  ctx: CanvasRenderingContext2D,
+  face: FaceContent,
+  charsTyped: number,
+  blink: boolean,
+) {
   // Background
-  const grad = ctx.createLinearGradient(0, 0, 0, FACE_PX);
-  grad.addColorStop(0, "#0d1117");
-  grad.addColorStop(1, "#080c10");
-  ctx.fillStyle = grad;
+  ctx.fillStyle = "#0b0f14";
   ctx.fillRect(0, 0, FACE_PX, FACE_PX);
 
-  // Subtle scanlines
-  ctx.fillStyle = "rgba(0,229,195,0.025)";
-  for (let y = 0; y < FACE_PX; y += 4) ctx.fillRect(0, y, FACE_PX, 1);
-
-  // Border + glow
+  // Border (no expensive shadowBlur)
   ctx.strokeStyle = COLORS.border;
-  ctx.lineWidth = 6;
-  ctx.shadowColor = COLORS.border;
-  ctx.shadowBlur = 30;
-  ctx.strokeRect(8, 8, FACE_PX - 16, FACE_PX - 16);
-  ctx.shadowBlur = 0;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(4, 4, FACE_PX - 8, FACE_PX - 8);
 
   // Title bar
   ctx.fillStyle = "rgba(0,229,195,0.08)";
-  ctx.fillRect(8, 8, FACE_PX - 16, 80);
+  ctx.fillRect(4, 4, FACE_PX - 8, 40);
   ctx.fillStyle = COLORS.prompt;
-  ctx.font = "600 32px ui-monospace, 'JetBrains Mono', monospace";
-  ctx.fillText("● ● ●", 40, 60);
+  ctx.font = "600 16px ui-monospace, 'JetBrains Mono', monospace";
+  ctx.fillText("● ● ●", 20, 30);
   ctx.fillStyle = COLORS.dim;
-  ctx.font = "500 28px ui-monospace, monospace";
+  ctx.font = "500 14px ui-monospace, monospace";
   ctx.textAlign = "center";
-  ctx.fillText(face.prompt, FACE_PX / 2, 60);
+  ctx.fillText(face.prompt, FACE_PX / 2, 30);
   ctx.textAlign = "left";
 
   // Body text
-  const padX = 56;
-  let y = 160;
-  const lineH = 56;
-  ctx.font = "500 32px ui-monospace, 'JetBrains Mono', monospace";
+  const padX = 28;
+  let y = 80;
+  const lineH = 28;
+  ctx.font = "500 16px ui-monospace, 'JetBrains Mono', monospace";
   let used = 0;
   let cursorPos: { x: number; y: number } | null = null;
 
@@ -170,20 +165,18 @@ function makeFaceCanvas(face: FaceContent, charsTyped: number, blink: boolean) {
 
     if (visible.length < line.text.length) {
       const w = ctx.measureText(visible).width;
-      cursorPos = { x: padX + w + 4, y };
+      cursorPos = { x: padX + w + 2, y };
       break;
     }
     y += lineH;
-    if (y > FACE_PX - 80) break;
+    if (y > FACE_PX - 40) break;
   }
 
   // Cursor block
   if (cursorPos && blink) {
     ctx.fillStyle = COLORS.cursor;
-    ctx.fillRect(cursorPos.x, cursorPos.y - 30, 16, 36);
+    ctx.fillRect(cursorPos.x, cursorPos.y - 14, 8, 18);
   }
-
-  return c;
 }
 
 /* ------------------------------ Component ------------------------------ */
