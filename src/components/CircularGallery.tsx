@@ -252,6 +252,7 @@ class Media {
         uniform vec2 uPlaneSizes;
         uniform sampler2D tMap;
         uniform float uBorderRadius;
+        uniform float uHover;
         varying vec2 vUv;
         
         float roundedBoxSDF(vec2 p, vec2 b, float r) {
@@ -274,15 +275,24 @@ class Media {
           
           float edgeSmooth = 0.002;
           float alpha = 1.0 - smoothstep(-edgeSmooth, edgeSmooth, d);
-          
-          gl_FragColor = vec4(color.rgb, alpha);
+
+          // Inner teal rim that intensifies with hover (glow on focused tile).
+          float rim = 1.0 - smoothstep(-0.06, 0.0, d);
+          vec3 teal = vec3(0.0, 0.898, 0.764);
+          vec3 rgb = mix(color.rgb, color.rgb + teal * rim * 0.55, uHover);
+
+          // Subtle global brightness lift on hover.
+          rgb += teal * 0.04 * uHover;
+
+          gl_FragColor = vec4(rgb, alpha);
         }
       `,
       uniforms: {
         tMap: { value: texture },
         uPlaneSizes: { value: [0, 0] },
         uImageSizes: { value: [0, 0] },
-        uBorderRadius: { value: this.borderRadius }
+        uBorderRadius: { value: this.borderRadius },
+        uHover: { value: 0 }
       },
       transparent: true
     });
