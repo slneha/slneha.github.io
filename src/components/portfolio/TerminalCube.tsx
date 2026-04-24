@@ -201,18 +201,27 @@ export function TerminalCube() {
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
     camera.position.set(0, 0, 6.2);
 
-    // Build textures + materials
+    // Build textures + materials. Each face owns ONE persistent canvas + 2D ctx
+    // that we redraw into; no per-frame allocations.
+    const canvases: HTMLCanvasElement[] = [];
+    const ctxs: CanvasRenderingContext2D[] = [];
     const textures: THREE.CanvasTexture[] = [];
     const materials: THREE.MeshBasicMaterial[] = [];
     for (let i = 0; i < 6; i++) {
-      const canvas = makeFaceCanvas(FACES[i], 0, true);
+      const canvas = document.createElement("canvas");
+      canvas.width = FACE_PX;
+      canvas.height = FACE_PX;
+      const ctx = canvas.getContext("2d")!;
+      drawFace(ctx, FACES[i], 0, true);
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = false;
+      canvases.push(canvas);
+      ctxs.push(ctx);
       textures.push(tex);
-      materials.push(
-        new THREE.MeshBasicMaterial({ map: tex, transparent: true }),
-      );
+      materials.push(new THREE.MeshBasicMaterial({ map: tex }));
     }
 
     const geo = new THREE.BoxGeometry(2.4, 2.4, 2.4);
@@ -271,8 +280,10 @@ export function TerminalCube() {
     const totalChars = FACES.map((f) =>
       f.lines.reduce((s, l) => s + l.text.length + 4, 0),
     );
-    const typedAt: number[] = FACES.map(() => 0);
+    const typedAt: number[] = FACES.map(() => -1);
     const phaseStart = performance.now();
+    let lastFaceUpdate = 0;
+    let lastBlink = false;
 
     const onResize = () => {
       const w = container.clientWidth;
@@ -283,6 +294,8 @@ export function TerminalCube() {
     };
     window.addEventListener("resize", onResize);
 
+    // Throttle face redraws to ~10 fps. The cube itself still spins at full 60.
+    const FACE_REDRAW_INTERVAL_MS = 100;
     let raf = 0;
     const tick = () => {
       const now = performance.now();
@@ -295,40 +308,27 @@ export function TerminalCube() {
         if (Math.abs(velY) < 0.001) velY = 0.0015;
         rotY += velY;
         rotX += velX;
-        // Drift rotX gently back toward neutral
         rotX += (-0.2 - rotX) * 0.005;
       }
       cube.rotation.x = rotX;
       cube.rotation.y = rotY;
 
-      // Update each face's typed-out characters
-      const blink = Math.floor(elapsed * 2) % 2 === 0;
-      for (let i = 0; i < 6; i++) {
-        const speed = 28; // chars per second
-        const target = Math.min(
-          totalChars[i] + 60, // include trailing pause then loop
-          Math.floor(elapsed * speed) % (totalChars[i] + 80),
-        );
-        if (target !== typedAt[i]) {
-          typedAt[i] = target;
-          const canvas = makeFaceCanvas(
-            FACES[i],
-            Math.min(target, totalChars[i]),
-            blink,
-          );
-          (textures[i].image as HTMLCanvasElement)
-            .getContext("2d")!
-            .drawImage(canvas, 0, 0);
-          textures[i].needsUpdate = true;
-        } else {
-          // still flip blink
-          const ctx = (textures[i].image as HTMLCanvasElement).getContext("2d")!;
-          ctx.drawImage(
-            makeFaceCanvas(FACES[i], Math.min(typedAt[i], totalChars[i]), blink),
-            0,
-            0,
-          );
-          textures[i].needsUpdate = true;
+      // Throttle face updates: only redraw when typing progresses or blink flips.
+      if (now - lastFaceUpdate >= FACE_REDRAW_INTERVAL_MS) {
+        lastFaceUpdate = now;
+        const blink = Math.floor(elapsed * 2) % 2 === 0;
+        const blinkChanged = blink !== lastBlink;
+        lastBlink = blink;
+        const speed = 28;
+        for (let i = 0; i < 6; i++) {
+          const target =
+            Math.floor(elapsed * speed) % (totalChars[i] + 80);
+          const clamped = Math.min(target, totalChars[i]);
+          if (clamped !== typedAt[i] || blinkChanged) {
+            typedAt[i] = clamped;
+            drawFace(ctxs[i], FACES[i], clamped, blink);
+            textures[i].needsUpdate = true;
+          }
         }
       }
 
