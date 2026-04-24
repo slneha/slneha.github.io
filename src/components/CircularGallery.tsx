@@ -379,16 +379,13 @@ class Media {
     this.plane.scale.y = this.baseScaleY * s;
     this.plane.rotation.z = this.baseRotZ;
 
-    // Opacity fade for non-focused tiles + drive shader glow on focused.
-    const targetOpacity = 1 - this.dimCurrent * 0.65;
+    // Drive shader uniforms: glow on focused tile, opacity fade on non-focused.
     if (this.program.uniforms.uHover) {
       this.program.uniforms.uHover.value = this.hoverCurrent;
     }
-    // OGL Mesh has no opacity uniform by default; we encode it as a brightness
-    // factor via the alpha already computed in the shader. We approximate the
-    // fade by scaling the plane on the dim axis (handled above) and by letting
-    // the receded z naturally shrink it under perspective.
-    void targetOpacity;
+    if (this.program.uniforms.uOpacity) {
+      this.program.uniforms.uOpacity.value = 1 - this.dimCurrent * 0.6;
+    }
 
     this.speed = scroll.current - scroll.last;
 
