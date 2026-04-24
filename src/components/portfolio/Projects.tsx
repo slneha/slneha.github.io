@@ -110,16 +110,17 @@ function escapeXML(s: string) {
 }
 
 function buildCardSVG(p: Project, index: number): string {
-  const W = 700;
-  const H = 900;
+  // Render at 2x for a sharper texture once OGL builds mipmaps.
+  const W = 1400;
+  const H = 1800;
   const shapeMarkup = shapeSVG(p.shape);
   const tagsMarkup = p.tags
     .map((t, i) => {
-      const x = 60 + i * 150;
+      const x = 120 + i * 320;
       return `
-        <g transform="translate(${x}, 720)">
-          <rect x="0" y="0" rx="999" ry="999" width="140" height="38" fill="none" stroke="rgba(0,229,195,0.15)" stroke-width="1"/>
-          <text x="70" y="25" font-family="'DM Mono', monospace" font-size="14" fill="${MUTED}" text-anchor="middle" letter-spacing="1.2">${escapeXML(t)}</text>
+        <g transform="translate(${x}, 1440)">
+          <rect x="0" y="0" rx="999" ry="999" width="300" height="76" fill="none" stroke="rgba(0,229,195,0.25)" stroke-width="2"/>
+          <text x="150" y="50" font-family="'DM Mono', monospace" font-size="28" fill="${MUTED}" text-anchor="middle" letter-spacing="2.4">${escapeXML(t)}</text>
         </g>`;
     })
     .join("");
@@ -135,31 +136,29 @@ function buildCardSVG(p: Project, index: number): string {
         <stop offset="100%" stop-color="rgba(0,229,195,0)"/>
       </radialGradient>
     </defs>
-    <rect width="${W}" height="${H}" rx="24" fill="url(#g${index})"/>
-    <rect width="${W}" height="${H}" rx="24" fill="url(#glow${index})"/>
-    <rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="23" fill="none" stroke="rgba(0,229,195,0.2)" stroke-width="1"/>
+    <rect width="${W}" height="${H}" rx="48" fill="url(#g${index})"/>
+    <rect width="${W}" height="${H}" rx="48" fill="url(#glow${index})"/>
+    <rect x="2" y="2" width="${W - 4}" height="${H - 4}" rx="46" fill="none" stroke="rgba(0,229,195,0.25)" stroke-width="2"/>
 
-    <text x="60" y="90" font-family="'Syne Mono', monospace" font-size="22" fill="${C}" letter-spacing="3">[ 0${index + 1} ]</text>
-
-    <g transform="translate(60, 140) scale(2.9, 3.4)">
+    <g transform="translate(120, 200) scale(5.8, 6.8)">
       ${shapeMarkup}
     </g>
 
-    <text x="60" y="540" font-family="'Syne', sans-serif" font-weight="800" font-size="48" fill="${TEXT}" letter-spacing="-1">
+    <text x="120" y="1080" font-family="'Syne', sans-serif" font-weight="800" font-size="96" fill="${TEXT}" letter-spacing="-2">
       ${escapeXML(p.title)}
     </text>
 
-    <foreignObject x="60" y="570" width="${W - 120}" height="120">
-      <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'DM Mono',monospace;font-size:20px;color:${MUTED};line-height:1.55;letter-spacing:0.02em">
+    <foreignObject x="120" y="1140" width="${W - 240}" height="260">
+      <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'DM Mono',monospace;font-size:40px;color:${MUTED};line-height:1.55;letter-spacing:0.02em">
         ${escapeXML(p.desc)}
       </div>
     </foreignObject>
 
     ${tagsMarkup}
 
-    <g transform="translate(${W - 280}, 820)">
-      <rect x="0" y="0" rx="6" ry="6" width="220" height="42" fill="${WARM}"/>
-      <text x="110" y="28" font-family="'Syne Mono', monospace" font-size="18" fill="#1a0d00" text-anchor="middle" font-weight="600">${escapeXML(p.badge)}</text>
+    <g transform="translate(${W - 560}, 1640)">
+      <rect x="0" y="0" rx="12" ry="12" width="440" height="84" fill="${WARM}"/>
+      <text x="220" y="56" font-family="'Syne Mono', monospace" font-size="36" fill="#1a0d00" text-anchor="middle" font-weight="600">${escapeXML(p.badge)}</text>
     </g>
   </svg>`;
 }
