@@ -276,15 +276,22 @@ class Media {
             vUv.y * ratio.y + (1.0 - ratio.y) * 0.5
           );
 
-          // Mild chromatic shift on the shape area only (top ~38% of the tile)
-          // so the body text stays crisp. Active during the 1s hover pulse.
-          float pulse = sin(uHoverTime * 3.14159) * uHover; // 0 → 1 → 0 over 1s
+          // 1s hover pulse: 0 → 1 → 0
+          float pulse = sin(uHoverTime * 3.14159) * uHover;
+          // Restrict the *image distortion* to the shape area (top ~38%) so
+          // body text stays crisp.
           float shapeMask = 1.0 - smoothstep(0.34, 0.42, vUv.y);
-          float shift = 0.0025 * pulse * shapeMask;
+
+          // Animated chromatic shift + tiny vertical ripple on the shape art.
+          float ripple = sin(vUv.x * 18.0 - uHoverTime * 6.2832) * 0.004 * pulse * shapeMask;
+          float shift = 0.006 * pulse * shapeMask;
+          vec2 uvR = uv + vec2(shift, ripple);
+          vec2 uvG = uv + vec2(0.0,   ripple);
+          vec2 uvB = uv + vec2(-shift, ripple);
           vec4 color;
-          color.r = texture2D(tMap, uv + vec2(shift, 0.0)).r;
-          color.g = texture2D(tMap, uv).g;
-          color.b = texture2D(tMap, uv - vec2(shift, 0.0)).b;
+          color.r = texture2D(tMap, uvR).r;
+          color.g = texture2D(tMap, uvG).g;
+          color.b = texture2D(tMap, uvB).b;
           color.a = texture2D(tMap, uv).a;
 
           float d = roundedBoxSDF(vUv - 0.5, vec2(0.5 - uBorderRadius), uBorderRadius);
@@ -298,10 +305,10 @@ class Media {
           float outline = smoothstep(-0.006, -0.002, d) - smoothstep(-0.002, 0.0, d);
           rgb = mix(rgb, teal, outline * 0.55 * uHover);
 
-          // 1s teal scanline sweep across the tile, restricted to the shape area.
-          float sweepY = 1.0 - uHoverTime * 1.4; // moves from top → past bottom in ~1s
-          float sweep = smoothstep(0.05, 0.0, abs(vUv.y - sweepY)) * shapeMask;
-          rgb += teal * sweep * 0.18 * uHover;
+          // 1s teal scanline sweep across the FULL tile (top → past bottom).
+          float sweepY = 1.0 - uHoverTime * 1.4;
+          float sweep = smoothstep(0.05, 0.0, abs(vUv.y - sweepY));
+          rgb += teal * sweep * 0.16 * uHover;
 
           gl_FragColor = vec4(rgb, alpha * uOpacity);
         }
