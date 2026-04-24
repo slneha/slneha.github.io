@@ -1,3 +1,7 @@
+import { Suspense, lazy } from "react";
+
+const ModelViewer = lazy(() => import("@/components/ModelViewer"));
+
 const headline = [
   { word: "Neha", accent: false },
   { word: "Senthil", accent: false, br: true },
