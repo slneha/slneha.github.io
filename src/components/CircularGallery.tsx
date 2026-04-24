@@ -561,6 +561,7 @@ class App {
 
   onWheel(e: Event) {
     const wheelEvent = e as WheelEvent;
+    wheelEvent.preventDefault();
     const delta = wheelEvent.deltaY || (wheelEvent as any).wheelDelta || (wheelEvent as any).detail;
     this.scroll.target += (delta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.2;
     this.onCheckDebounce();
