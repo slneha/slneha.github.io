@@ -406,15 +406,14 @@ export function Projects() {
                 filter: show ? "none" : "grayscale(0.8)",
               }}
             >
-              <Reveal delay={i * 60}>
-                <div
-                  style={{
-                    opacity: show ? 1 : 0.15,
-                    transition: "opacity 0.3s ease",
-                    height: "100%",
-                  }}
-                >
-                  <CometCard rotateDepth={14} translateDepth={14} className="h-full">
+              <div
+                style={{
+                  opacity: show ? 1 : 0.15,
+                  transition: "opacity 0.3s ease",
+                  height: "100%",
+                }}
+              >
+                <CometCard rotateDepth={14} translateDepth={14} className="h-full">
                   <div
                     style={{
                       background: "var(--bg-secondary)",
@@ -500,9 +499,8 @@ export function Projects() {
                       </span>
                     </div>
                   </div>
-                  </CometCard>
-                </div>
-              </Reveal>
+                </CometCard>
+              </div>
             </div>
           );
         })}
