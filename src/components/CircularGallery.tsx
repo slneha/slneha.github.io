@@ -361,13 +361,32 @@ class Media {
       }
     }
 
-    // Smoothly approach hover state
-    this.hoverCurrent = lerp(this.hoverCurrent, this.hoverTarget, 0.12);
-    const hoverScale = 1 + this.hoverCurrent * 0.06;
-    const hoverTilt = this.hoverCurrent * 0.18; // ~10deg in radians
-    this.plane.scale.x = this.baseScaleX * hoverScale;
-    this.plane.scale.y = this.baseScaleY * hoverScale;
-    this.plane.rotation.z = this.baseRotZ + hoverTilt;
+    // Smoothly approach hover + dim states
+    this.hoverCurrent = lerp(this.hoverCurrent, this.hoverTarget, 0.14);
+    this.dimCurrent = lerp(this.dimCurrent, this.dimTarget, 0.12);
+
+    // Focused tile: lift toward camera (z) + slight scale; non-focused: push back + fade.
+    const lift = this.hoverCurrent * 0.55;          // focused → forward
+    const recede = this.dimCurrent * -0.35;          // others  → back
+    this.plane.position.z = lift + recede;
+
+    const hoverScale = 1 + this.hoverCurrent * 0.05;
+    const dimScale = 1 - this.dimCurrent * 0.04;
+    const s = hoverScale * dimScale;
+    this.plane.scale.x = this.baseScaleX * s;
+    this.plane.scale.y = this.baseScaleY * s;
+    this.plane.rotation.z = this.baseRotZ;
+
+    // Opacity fade for non-focused tiles + drive shader glow on focused.
+    const targetOpacity = 1 - this.dimCurrent * 0.65;
+    if (this.program.uniforms.uHover) {
+      this.program.uniforms.uHover.value = this.hoverCurrent;
+    }
+    // OGL Mesh has no opacity uniform by default; we encode it as a brightness
+    // factor via the alpha already computed in the shader. We approximate the
+    // fade by scaling the plane on the dim axis (handled above) and by letting
+    // the receded z naturally shrink it under perspective.
+    void targetOpacity;
 
     this.speed = scroll.current - scroll.last;
 
