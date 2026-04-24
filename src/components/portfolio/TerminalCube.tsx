@@ -222,7 +222,7 @@ export function TerminalCube() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     container.appendChild(renderer.domElement);
-    renderer.domElement.style.cursor = "grab";
+    renderer.domElement.style.cursor = CURSOR_IDLE;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
@@ -280,7 +280,7 @@ export function TerminalCube() {
       lastX = e.clientX;
       lastY = e.clientY;
       renderer.domElement.setPointerCapture(e.pointerId);
-      renderer.domElement.style.cursor = "grabbing";
+      renderer.domElement.style.cursor = CURSOR_ACTIVE;
     };
     const onPointerMove = (e: PointerEvent) => {
       if (!isDragging) return;
@@ -296,7 +296,7 @@ export function TerminalCube() {
     const onPointerUp = (e: PointerEvent) => {
       isDragging = false;
       renderer.domElement.releasePointerCapture(e.pointerId);
-      renderer.domElement.style.cursor = "grab";
+      renderer.domElement.style.cursor = CURSOR_IDLE;
     };
     renderer.domElement.addEventListener("pointerdown", onPointerDown);
     renderer.domElement.addEventListener("pointermove", onPointerMove);
