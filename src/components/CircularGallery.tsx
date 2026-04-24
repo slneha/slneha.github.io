@@ -185,6 +185,9 @@ class Media {
   isAfter: boolean = false;
   hoverTarget: number = 0;
   hoverCurrent: number = 0;
+  dimTarget: number = 0;
+  dimCurrent: number = 0;
+  baseOpacity: number = 1;
   baseScaleX: number = 1;
   baseScaleY: number = 1;
   baseRotZ: number = 0;
