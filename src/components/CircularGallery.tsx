@@ -139,21 +139,6 @@ interface Viewport {
   height: number;
 }
 
-export interface SpriteAtlas {
-  /** Visible tile width within the texture atlas, in px. */
-  tileWidth: number;
-  /** Visible tile height within the texture atlas, in px. */
-  tileHeight: number;
-  /** Full atlas width in px. */
-  atlasWidth: number;
-  /** Full atlas height in px. */
-  atlasHeight: number;
-  /** Shape area expressed as fractions of the visible tile (0..1). */
-  shapeRect: { x: number; y: number; w: number; h: number };
-  /** Sprite strip metadata. w/h/y are fractions of the atlas; count is integer. */
-  spriteFrame: { w: number; h: number; y: number; count: number };
-}
-
 interface MediaProps {
   geometry: Plane;
   gl: GL;
