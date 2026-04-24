@@ -2,6 +2,25 @@ import { useMemo, useState } from "react";
 import { Section } from "./Section";
 import CircularGallery from "@/components/CircularGallery";
 
+/* ---------- Sprite sheet config ---------- */
+const FRAME_COUNT = 24;          // frames in the hover animation (~24 fps over 1s)
+const FRAME_W = 300;             // each sprite frame, in px
+const FRAME_H = 150;
+
+/* Visible tile dimensions */
+const TILE_W = 1400;
+const TILE_H = 1800;
+
+/* Shape area inside the visible tile (must match the <rect> below) */
+const SHAPE_X = 80;
+const SHAPE_Y = 100;
+const SHAPE_W = TILE_W - 160;    // 1240
+const SHAPE_H = 640;
+
+/* Full atlas dimensions: visible tile on top, sprite strip below it */
+const ATLAS_W = Math.max(TILE_W, FRAME_COUNT * FRAME_W);   // 7200
+const ATLAS_H = TILE_H + FRAME_H;                          // 1950
+
 type Cat = "ALL" | "ML" | "CLOUD" | "NLP" | "SECURITY";
 type ShapeKind = "scatter" | "bar" | "wave" | "hex" | "nodes";
 
@@ -57,51 +76,64 @@ const projects: Project[] = [
   },
 ];
 
-/* ---------- SVG shape generators (static markup for the tile texture) ---------- */
-
-/**
- * Each shape renders to a 200x100 internal coordinate system. We embed it inside
- * a nested <svg viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet"> so it
- * scales uniformly into whatever box we give it on the tile (no horizontal stretch).
- * Colors come straight from the design tokens: teal #00e5c3 + amber #f5a623.
+/* ---------- Animated SVG shape generators ----------
+ * Each generator takes t ∈ [0,1] (animation phase) and renders into a
+ * 200×100 coordinate system. We embed each frame inside a nested
+ * <svg viewBox="0 0 200 100"> so it scales uniformly into whatever box we
+ * give it. Frame 0 is the resting state; t=1 cycles back to that state.
+ * Colors: teal #00e5c3 + amber #f5a623.
  */
 const TEAL = "#00e5c3";
 const TEAL_SOFT = "#6af0c8";
 const AMBER = "#f5a623";
 
-function scatterSVG() {
+function scatterSVG(t: number) {
+  // Dots pulse: radius breathes once over the loop.
+  const pulse = Math.sin(t * Math.PI * 2); // -1..1, returns to 0 at t=0,0.5,1
   let out = "";
   for (let i = 0; i < 36; i++) {
     const x = ((i * 37) % 200) + ((i * 13) % 7) - 3;
     const y = ((i * 53) % 80) + 10;
-    const r = 1.5 + (i % 3) * 0.8;
+    const baseR = 1.5 + (i % 3) * 0.8;
+    // Each dot pulses with a slight per-dot phase offset.
+    const phase = (i * 0.7) % (Math.PI * 2);
+    const local = Math.sin(t * Math.PI * 2 + phase);
+    const r = baseR + local * 1.4 + Math.abs(pulse) * 0.4;
     const fill = i % 5 === 0 ? AMBER : i % 2 === 0 ? TEAL : TEAL_SOFT;
-    out += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" opacity="${0.55 + (i % 4) * 0.12}"/>`;
+    const op = 0.55 + (i % 4) * 0.12 + Math.abs(local) * 0.2;
+    out += `<circle cx="${x}" cy="${y}" r="${r.toFixed(2)}" fill="${fill}" opacity="${Math.min(op, 1).toFixed(2)}"/>`;
   }
   return out;
 }
 
-function barSVG() {
-  const heights = [38, 62, 28, 54, 70, 44, 60, 34, 76, 50, 66, 40];
+function barSVG(t: number) {
+  // Bars grow and shrink: each bar oscillates around its base height.
+  const base = [38, 62, 28, 54, 70, 44, 60, 34, 76, 50, 66, 40];
   const w = 12;
   const gap = 4;
-  const total = heights.length * (w + gap) - gap;
+  const total = base.length * (w + gap) - gap;
   const offsetX = (200 - total) / 2;
-  return heights
+  return base
     .map((h, i) => {
+      const phase = (i / base.length) * Math.PI * 2;
+      // Cycle once over [0,1], with per-bar offset → traveling-wave feel.
+      const delta = Math.sin(t * Math.PI * 2 + phase) * 14;
+      const finalH = Math.max(6, h + delta);
       const fill = i % 3 === 0 ? AMBER : TEAL;
       const opacity = i % 3 === 0 ? 0.95 : 0.85;
-      return `<rect x="${offsetX + i * (w + gap)}" y="${95 - h}" width="${w}" height="${h}" rx="1.5" fill="${fill}" opacity="${opacity}"/>`;
+      return `<rect x="${offsetX + i * (w + gap)}" y="${(95 - finalH).toFixed(2)}" width="${w}" height="${finalH.toFixed(2)}" rx="1.5" fill="${fill}" opacity="${opacity}"/>`;
     })
     .join("");
 }
 
-function waveSVG() {
+function waveSVG(t: number) {
+  // One full waveform cycle over [0,1] — phase advances by 2π.
+  const phaseShift = t * Math.PI * 2;
   const wave = (phase: number, amp: number, yc: number) =>
     Array.from({ length: 100 })
       .map((_, i) => {
         const x = (i / 99) * 200;
-        const y = yc + Math.sin(i / 5 + phase) * amp;
+        const y = yc + Math.sin(i / 5 + phase + phaseShift) * amp;
         return `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
       })
       .join(" ");
@@ -112,13 +144,18 @@ function waveSVG() {
   `;
 }
 
-function hexSVG() {
+function hexSVG(t: number) {
+  // Hexes rotate one-half turn over the cycle, with a gentle scale breath.
+  const rot = t * Math.PI; // radians
+  const breath = 1 + Math.sin(t * Math.PI * 2) * 0.08;
   return [25, 65, 105, 145, 185]
     .map((cx, i) => {
+      const localRot = rot + (i % 2 === 0 ? 0 : Math.PI / 6);
       const pts = Array.from({ length: 6 })
         .map((_, j) => {
-          const a = (Math.PI / 3) * j - Math.PI / 6;
-          return `${cx + Math.cos(a) * 22},${50 + Math.sin(a) * 22}`;
+          const a = (Math.PI / 3) * j - Math.PI / 6 + localRot;
+          const r = 22 * breath;
+          return `${(cx + Math.cos(a) * r).toFixed(2)},${(50 + Math.sin(a) * r).toFixed(2)}`;
         })
         .join(" ");
       const stroke = i === 2 ? AMBER : TEAL;
@@ -128,7 +165,8 @@ function hexSVG() {
     .join("");
 }
 
-function nodesSVG() {
+function nodesSVG(t: number) {
+  // Nodes pulse, with rings expanding outward.
   const nodes: [number, number][] = [
     [22, 28],
     [62, 70],
@@ -137,29 +175,39 @@ function nodesSVG() {
     [184, 24],
   ];
   let edges = "";
+  // Edge opacity pulses lightly with t.
+  const edgeOp = 0.4 + Math.sin(t * Math.PI * 2) * 0.15;
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
       const [x1, y1] = nodes[i];
       const [x2, y2] = nodes[j];
-      edges += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${TEAL}" stroke-width="0.8" opacity="0.4"/>`;
+      edges += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${TEAL}" stroke-width="0.8" opacity="${edgeOp.toFixed(2)}"/>`;
     }
   }
   const pts = nodes
-    .map(
-      ([x, y], i) =>
-        `<circle cx="${x}" cy="${y}" r="${5 + (i % 2) * 1.5}" fill="${i === 2 ? AMBER : TEAL}" opacity="0.95"/>` +
-        `<circle cx="${x}" cy="${y}" r="${10 + (i % 2) * 2}" fill="none" stroke="${i === 2 ? AMBER : TEAL}" stroke-width="0.8" opacity="0.35"/>`,
-    )
+    .map(([x, y], i) => {
+      const phase = (i / nodes.length) * Math.PI * 2;
+      const pulse = Math.sin(t * Math.PI * 2 + phase);
+      const coreR = 5 + (i % 2) * 1.5 + pulse * 1.2;
+      // Expanding ring: radius grows over t, opacity fades out.
+      const ringR = 10 + (i % 2) * 2 + t * 18;
+      const ringOp = 0.45 * (1 - t);
+      const fill = i === 2 ? AMBER : TEAL;
+      return (
+        `<circle cx="${x}" cy="${y}" r="${coreR.toFixed(2)}" fill="${fill}" opacity="0.95"/>` +
+        `<circle cx="${x}" cy="${y}" r="${ringR.toFixed(2)}" fill="none" stroke="${fill}" stroke-width="0.8" opacity="${ringOp.toFixed(2)}"/>`
+      );
+    })
     .join("");
   return edges + pts;
 }
 
-function shapeMarkup(kind: ShapeKind) {
-  if (kind === "scatter") return scatterSVG();
-  if (kind === "bar") return barSVG();
-  if (kind === "wave") return waveSVG();
-  if (kind === "hex") return hexSVG();
-  return nodesSVG();
+function shapeMarkup(kind: ShapeKind, t: number) {
+  if (kind === "scatter") return scatterSVG(t);
+  if (kind === "bar") return barSVG(t);
+  if (kind === "wave") return waveSVG(t);
+  if (kind === "hex") return hexSVG(t);
+  return nodesSVG(t);
 }
 
 /* ---------- Build tile SVG → data URL ---------- */
