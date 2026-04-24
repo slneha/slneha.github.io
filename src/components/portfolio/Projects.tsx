@@ -383,6 +383,22 @@ export function Projects() {
             textColor="#ffffff"
             borderRadius={0.04}
             scrollEase={0.05}
+            tileWidth={TILE_W}
+            tileHeight={TILE_H}
+            atlasWidth={ATLAS_W}
+            atlasHeight={ATLAS_H}
+            shapeRect={{
+              x: SHAPE_X / TILE_W,
+              y: SHAPE_Y / TILE_H,
+              w: SHAPE_W / TILE_W,
+              h: SHAPE_H / TILE_H,
+            }}
+            spriteFrame={{
+              w: FRAME_W / ATLAS_W,
+              h: FRAME_H / ATLAS_H,
+              y: TILE_H / ATLAS_H,
+              count: FRAME_COUNT,
+            }}
           />
         ) : (
           <div
