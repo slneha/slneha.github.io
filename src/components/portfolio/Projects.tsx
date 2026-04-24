@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Section } from "./Section";
 import { Reveal } from "./Reveal";
 import { CometCard } from "@/components/ui/comet-card";
@@ -266,6 +266,94 @@ export function Projects() {
   const visible = (p: Project) =>
     active === "ALL" || p.cats.includes(active as Exclude<Cat, "ALL">);
 
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const rafRef = useRef<number | null>(null);
+
+  // Curve the cards along an arc based on their distance from viewport center.
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    const apply = () => {
+      const sRect = scroller.getBoundingClientRect();
+      const center = sRect.left + sRect.width / 2;
+      const half = sRect.width / 2 || 1;
+      cardRefs.current.forEach((card) => {
+        if (!card) return;
+        const cRect = card.getBoundingClientRect();
+        const cCenter = cRect.left + cRect.width / 2;
+        const t = Math.max(-1.2, Math.min(1.2, (cCenter - center) / half));
+        // Arc: drop & fade outer cards, tilt them inward
+        const lift = -Math.cos(t * (Math.PI / 2)) * 26 + 26; // 0 at center, ~26 at edges
+        const tilt = t * 14; // rotateY in deg
+        const dim = 1 - Math.min(0.5, Math.abs(t) * 0.45);
+        card.style.setProperty("--curve-y", `${lift}px`);
+        card.style.setProperty("--curve-rot", `${tilt}deg`);
+        card.style.setProperty("--curve-opacity", `${dim}`);
+      });
+    };
+
+    const onScroll = () => {
+      if (rafRef.current) return;
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        apply();
+      });
+    };
+
+    apply();
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", apply);
+
+    // Horizontal wheel routing: only intercept when the user signals horizontal intent
+    // (shift+wheel, trackpad horizontal). Vertical wheel passes through to page scroll.
+    const onWheel = (e: WheelEvent) => {
+      const horizontal = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
+      if (!horizontal) return;
+      e.preventDefault();
+      scroller.scrollLeft += e.deltaX || e.deltaY;
+    };
+    scroller.addEventListener("wheel", onWheel, { passive: false });
+
+    // Click-and-drag to scroll
+    let isDown = false;
+    let startX = 0;
+    let startScroll = 0;
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      isDown = true;
+      startX = e.clientX;
+      startScroll = scroller.scrollLeft;
+      scroller.setPointerCapture(e.pointerId);
+      scroller.style.cursor = "grabbing";
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!isDown) return;
+      scroller.scrollLeft = startScroll - (e.clientX - startX);
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!isDown) return;
+      isDown = false;
+      scroller.releasePointerCapture(e.pointerId);
+      scroller.style.cursor = "grab";
+    };
+    scroller.addEventListener("pointerdown", onDown);
+    scroller.addEventListener("pointermove", onMove);
+    scroller.addEventListener("pointerup", onUp);
+    scroller.addEventListener("pointercancel", onUp);
+
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", apply);
+      scroller.removeEventListener("wheel", onWheel);
+      scroller.removeEventListener("pointerdown", onDown);
+      scroller.removeEventListener("pointermove", onMove);
+      scroller.removeEventListener("pointerup", onUp);
+      scroller.removeEventListener("pointercancel", onUp);
+    };
+  }, [active]);
+
   return (
     <Section id="projects" label="/projects" number="02" alt>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 36 }}>
@@ -281,26 +369,52 @@ export function Projects() {
       </div>
 
       <div
+        ref={scrollerRef}
+        className="curved-scroller"
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-          gap: 28,
+          marginInline: "calc(50% - 50vw)",
+          paddingInline: "calc(50vw - 180px)",
+          paddingBlock: "60px 40px",
+          overflowX: "auto",
+          overflowY: "hidden",
+          display: "flex",
+          gap: 32,
+          scrollSnapType: "x mandatory",
+          cursor: "grab",
+          perspective: "1400px",
         }}
       >
         {projects.map((p, i) => {
           const show = visible(p);
           return (
-            <Reveal key={p.title} delay={i * 60}>
-              <div
-                style={{
-                  opacity: show ? 1 : 0.15,
-                  transform: show ? "scale(1)" : "scale(0.97)",
-                  transition: "opacity 0.3s ease, transform 0.3s ease",
-                  pointerEvents: show ? "auto" : "none",
-                  height: "100%",
-                }}
-              >
-                <CometCard rotateDepth={14} translateDepth={14} className="h-full">
+            <div
+              key={p.title}
+              ref={(el) => {
+                cardRefs.current[i] = el;
+              }}
+              className="curved-card"
+              style={{
+                flex: "0 0 320px",
+                scrollSnapAlign: "center",
+                transformStyle: "preserve-3d",
+                transform:
+                  "translateY(var(--curve-y, 0px)) rotateY(var(--curve-rot, 0deg))",
+                opacity: `var(--curve-opacity, 1)`,
+                transition:
+                  "transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease",
+                pointerEvents: show ? "auto" : "none",
+                filter: show ? "none" : "grayscale(0.8)",
+              }}
+            >
+              <Reveal delay={i * 60}>
+                <div
+                  style={{
+                    opacity: show ? 1 : 0.15,
+                    transition: "opacity 0.3s ease",
+                    height: "100%",
+                  }}
+                >
+                  <CometCard rotateDepth={14} translateDepth={14} className="h-full">
                   <div
                     style={{
                       background: "var(--bg-secondary)",
@@ -386,11 +500,29 @@ export function Projects() {
                       </span>
                     </div>
                   </div>
-                </CometCard>
-              </div>
-            </Reveal>
+                  </CometCard>
+                </div>
+              </Reveal>
+            </div>
           );
         })}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          marginTop: 8,
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.7rem",
+          color: "var(--text-dim)",
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+        }}
+      >
+        <span>← drag</span>
+        <span style={{ color: "var(--accent-primary)" }}>● {projects.length} systems</span>
+        <span>scroll →</span>
       </div>
 
       <style>{`
