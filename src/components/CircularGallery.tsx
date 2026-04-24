@@ -588,8 +588,14 @@ class App {
 
   onWheel(e: Event) {
     const wheelEvent = e as WheelEvent;
+    const dx = wheelEvent.deltaX;
+    const dy = wheelEvent.deltaY;
+    // Only intercept clearly-horizontal wheel intent (trackpad swipe or shift+wheel).
+    // Vertical scroll falls through to the page so the user is never trapped.
+    const horizontalIntent = wheelEvent.shiftKey || Math.abs(dx) > Math.abs(dy);
+    if (!horizontalIntent) return;
     wheelEvent.preventDefault();
-    const delta = wheelEvent.deltaY || (wheelEvent as any).wheelDelta || (wheelEvent as any).detail;
+    const delta = dx || dy;
     this.scroll.target += (delta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.2;
     this.onCheckDebounce();
   }
