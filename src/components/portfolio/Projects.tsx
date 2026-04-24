@@ -1,211 +1,238 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { Section } from "./Section";
-import { Reveal } from "./Reveal";
-
-type Cat = "ALL" | "ML" | "CLOUD" | "NLP" | "SECURITY";
+import CircularGallery from "@/components/CircularGallery";
 
 type Project = {
   title: string;
   desc: string;
-  cats: Exclude<Cat, "ALL">[];
   tags: string[];
   badge: string;
   shape: "scatter" | "bar" | "wave" | "hex" | "nodes";
-  wide?: boolean;
 };
 
 const projects: Project[] = [
   {
-    title: "Backdoor Attacks in Continual Learning",
-    desc: "Studied trigger persistence and forgetting under EWC; reduced backdoor success rate by 18%.",
-    cats: ["SECURITY", "ML"],
+    title: "Backdoor Attacks · CL",
+    desc: "Studied trigger persistence and forgetting under EWC.",
     tags: ["PyTorch", "EWC", "Security"],
     badge: "18% forgetting ↓",
     shape: "scatter",
   },
   {
-    title: "UFC Fight Outcome Prediction",
-    desc: "Engineered fighter-form, reach, and stance features over 20 years of bout data.",
-    cats: ["ML"],
+    title: "UFC Fight Outcome",
+    desc: "Engineered fighter-form features over 20 years of bout data.",
     tags: ["Scikit-learn", "Feature Eng."],
     badge: "72% accuracy",
     shape: "bar",
   },
   {
     title: "Lip Reading Multi-Modal",
-    desc: "Visual-audio fusion model for silent speech transcription on noisy clips.",
-    cats: ["NLP", "ML"],
+    desc: "Visual-audio fusion for silent speech transcription.",
     tags: ["ResNet", "NLP", "CV"],
     badge: "20% accuracy ↑",
     shape: "wave",
   },
   {
     title: "AWS Serverless TTS",
-    desc: "Event-driven text-to-speech pipeline with cold-start budget under 400ms.",
-    cats: ["CLOUD"],
+    desc: "Event-driven text-to-speech pipeline. Cold-start <400ms.",
     tags: ["AWS SAM", "Lambda", "DynamoDB"],
     badge: "40% overhead ↓",
     shape: "hex",
-    wide: true,
   },
   {
     title: "Spotify Recommendation",
-    desc: "Hybrid collaborative + content recommender deployed on Streamlit + AWS.",
-    cats: ["ML", "CLOUD"],
-    tags: ["AWS", "Streamlit", "Hybrid Filter"],
+    desc: "Hybrid collaborative + content recommender on Streamlit + AWS.",
+    tags: ["AWS", "Streamlit", "Hybrid"],
     badge: "15% engagement ↑",
     shape: "nodes",
   },
 ];
 
-function Shape({ kind }: { kind: Project["shape"] }) {
-  const c = "var(--accent-primary)";
-  const cs = "var(--accent-secondary)";
+const C = "#00e5c3";
+const CS = "#6af0c8";
+const WARM = "#f5a623";
+const BG = "#0d1117";
+const TEXT = "#e8f0f5";
+const MUTED = "#7a8fa6";
+
+function shapeSVG(kind: Project["shape"]): string {
   if (kind === "scatter") {
-    return (
-      <svg viewBox="0 0 200 80" width="100%" height="80" aria-hidden>
-        {Array.from({ length: 28 }).map((_, i) => {
-          const x = (i * 37) % 200;
-          const y = ((i * 53) % 70) + 5;
-          return <circle key={i} cx={x} cy={y} r={1.5 + (i % 3)} fill={i % 4 === 0 ? c : cs} opacity={0.4 + (i % 4) * 0.15} />;
-        })}
-      </svg>
-    );
+    return Array.from({ length: 28 })
+      .map((_, i) => {
+        const x = (i * 37) % 200;
+        const y = ((i * 53) % 70) + 5;
+        const r = 1.5 + (i % 3);
+        const fill = i % 4 === 0 ? C : CS;
+        const op = 0.4 + (i % 4) * 0.15;
+        return `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" opacity="${op}"/>`;
+      })
+      .join("");
   }
   if (kind === "bar") {
-    return (
-      <svg viewBox="0 0 200 80" width="100%" height="80" aria-hidden>
-        {[40, 65, 30, 55, 70, 45, 60, 35, 75, 50].map((h, i) => (
-          <rect key={i} x={i * 20 + 4} y={80 - h} width="12" height={h} fill={i % 2 === 0 ? c : cs} opacity="0.7" />
-        ))}
-      </svg>
-    );
+    return [40, 65, 30, 55, 70, 45, 60, 35, 75, 50]
+      .map((h, i) => `<rect x="${i * 20 + 4}" y="${80 - h}" width="12" height="${h}" fill="${i % 2 === 0 ? C : CS}" opacity="0.7"/>`)
+      .join("");
   }
   if (kind === "wave") {
-    return (
-      <svg viewBox="0 0 200 80" width="100%" height="80" aria-hidden>
-        <path
-          d={Array.from({ length: 60 }).map((_, i) => {
-            const x = (i / 59) * 200;
-            const y = 40 + Math.sin(i / 3) * (15 + Math.sin(i / 7) * 10);
-            return `${i === 0 ? "M" : "L"}${x},${y}`;
-          }).join(" ")}
-          stroke={c}
-          strokeWidth="1.5"
-          fill="none"
-        />
-      </svg>
-    );
+    const d = Array.from({ length: 60 })
+      .map((_, i) => {
+        const x = (i / 59) * 200;
+        const y = 40 + Math.sin(i / 3) * (15 + Math.sin(i / 7) * 10);
+        return `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+      })
+      .join(" ");
+    return `<path d="${d}" stroke="${C}" stroke-width="1.5" fill="none"/>`;
   }
   if (kind === "hex") {
-    return (
-      <svg viewBox="0 0 200 80" width="100%" height="80" aria-hidden>
-        {[20, 60, 100, 140, 180].map((cx, i) => {
-          const pts = Array.from({ length: 6 }).map((_, j) => {
+    return [20, 60, 100, 140, 180]
+      .map((cx, i) => {
+        const pts = Array.from({ length: 6 })
+          .map((_, j) => {
             const a = (Math.PI / 3) * j;
-            return `${cx + Math.cos(a) * 18},${40 + Math.sin(a) * 18}`;
-          }).join(" ");
-          return <polygon key={cx} points={pts} fill="none" stroke={i % 2 ? c : cs} strokeWidth="1.2" opacity="0.7" />;
-        })}
-      </svg>
-    );
+            return `${(cx + Math.cos(a) * 18).toFixed(2)},${(40 + Math.sin(a) * 18).toFixed(2)}`;
+          })
+          .join(" ");
+        return `<polygon points="${pts}" fill="none" stroke="${i % 2 ? C : CS}" stroke-width="1.2" opacity="0.7"/>`;
+      })
+      .join("");
   }
-  return (
-    <svg viewBox="0 0 200 80" width="100%" height="80" aria-hidden>
-      {[[20, 20], [60, 60], [100, 25], [140, 55], [180, 30]].map(([x, y], i) =>
-        [[20, 20], [60, 60], [100, 25], [140, 55], [180, 30]].slice(i + 1).map(([x2, y2], j) => (
-          <line key={`${i}-${j}`} x1={x} y1={y} x2={x2} y2={y2} stroke={c} strokeWidth="0.5" opacity="0.4" />
-        )),
-      )}
-      {[[20, 20], [60, 60], [100, 25], [140, 55], [180, 30]].map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r="5" fill={c} opacity="0.8" />
-      ))}
-    </svg>
-  );
+  // nodes
+  const nodes = [[20, 20], [60, 60], [100, 25], [140, 55], [180, 30]];
+  const lines = nodes
+    .flatMap(([x, y], i) => nodes.slice(i + 1).map(([x2, y2]) => `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="${C}" stroke-width="0.5" opacity="0.4"/>`))
+    .join("");
+  const dots = nodes.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="${C}" opacity="0.8"/>`).join("");
+  return lines + dots;
 }
 
-const filters: Cat[] = ["ALL", "ML", "CLOUD", "NLP", "SECURITY"];
+function escapeXML(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function buildCardSVG(p: Project, index: number): string {
+  const W = 700;
+  const H = 900;
+  const shapeMarkup = shapeSVG(p.shape);
+  const tagsMarkup = p.tags
+    .map((t, i) => {
+      const x = 60 + i * 150;
+      return `
+        <g transform="translate(${x}, 720)">
+          <rect x="0" y="0" rx="999" ry="999" width="140" height="38" fill="none" stroke="rgba(0,229,195,0.15)" stroke-width="1"/>
+          <text x="70" y="25" font-family="'DM Mono', monospace" font-size="14" fill="${MUTED}" text-anchor="middle" letter-spacing="1.2">${escapeXML(t)}</text>
+        </g>`;
+    })
+    .join("");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+    <defs>
+      <linearGradient id="g${index}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#0f1820"/>
+        <stop offset="100%" stop-color="#080c10"/>
+      </linearGradient>
+      <radialGradient id="glow${index}" cx="0.5" cy="0.3" r="0.6">
+        <stop offset="0%" stop-color="rgba(0,229,195,0.12)"/>
+        <stop offset="100%" stop-color="rgba(0,229,195,0)"/>
+      </radialGradient>
+    </defs>
+    <rect width="${W}" height="${H}" rx="24" fill="url(#g${index})"/>
+    <rect width="${W}" height="${H}" rx="24" fill="url(#glow${index})"/>
+    <rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="23" fill="none" stroke="rgba(0,229,195,0.2)" stroke-width="1"/>
+
+    <text x="60" y="90" font-family="'Syne Mono', monospace" font-size="22" fill="${C}" letter-spacing="3">[ 0${index + 1} ]</text>
+
+    <g transform="translate(60, 140) scale(2.9, 3.4)">
+      ${shapeMarkup}
+    </g>
+
+    <text x="60" y="540" font-family="'Syne', sans-serif" font-weight="800" font-size="48" fill="${TEXT}" letter-spacing="-1">
+      ${escapeXML(p.title)}
+    </text>
+
+    <foreignObject x="60" y="570" width="${W - 120}" height="120">
+      <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'DM Mono',monospace;font-size:20px;color:${MUTED};line-height:1.55;letter-spacing:0.02em">
+        ${escapeXML(p.desc)}
+      </div>
+    </foreignObject>
+
+    ${tagsMarkup}
+
+    <g transform="translate(${W - 280}, 820)">
+      <rect x="0" y="0" rx="6" ry="6" width="220" height="42" fill="${WARM}"/>
+      <text x="110" y="28" font-family="'Syne Mono', monospace" font-size="18" fill="#1a0d00" text-anchor="middle" font-weight="600">${escapeXML(p.badge)}</text>
+    </g>
+  </svg>`;
+}
+
+function svgToDataURI(svg: string): string {
+  // Use base64 to safely embed any chars
+  const b64 = typeof window === "undefined"
+    ? Buffer.from(svg).toString("base64")
+    : window.btoa(unescape(encodeURIComponent(svg)));
+  return `data:image/svg+xml;base64,${b64}`;
+}
 
 export function Projects() {
-  const [active, setActive] = useState<Cat>("ALL");
-  const visible = (p: Project) => active === "ALL" || p.cats.includes(active as Exclude<Cat, "ALL">);
+  const items = useMemo(
+    () =>
+      projects.map((p, i) => ({
+        image: svgToDataURI(buildCardSVG(p, i)),
+        text: "",
+      })),
+    [],
+  );
 
   return (
     <Section id="projects" label="/projects" number="02" alt>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 36 }}>
-        {filters.map((f) => (
-          <button
-            key={f}
-            className={`pill-tab ${active === f ? "active" : ""}`}
-            onClick={() => setActive(f)}
-          >
-            {f}
-          </button>
-        ))}
+      <p
+        className="font-mono"
+        style={{
+          fontSize: "0.8rem",
+          color: "var(--text-secondary)",
+          maxWidth: 560,
+          marginBottom: 32,
+          letterSpacing: "0.04em",
+          lineHeight: 1.6,
+        }}
+      >
+        Drag, scroll, or swipe to traverse the orbit. Each tile is a deployed system, a paper, or an experiment that shipped.
+      </p>
+
+      <div
+        style={{
+          width: "100%",
+          height: "min(640px, 75vh)",
+          position: "relative",
+          marginInline: "calc(50% - 50vw)",
+          width: "100vw",
+        }}
+      >
+        <CircularGallery
+          items={items}
+          bend={3}
+          textColor="#e8f0f5"
+          borderRadius={0.06}
+          scrollSpeed={2}
+          scrollEase={0.05}
+        />
       </div>
 
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-          gap: 24,
+          display: "flex",
+          gap: 16,
+          marginTop: 24,
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.7rem",
+          color: "var(--text-dim)",
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
         }}
       >
-        {projects.map((p, i) => {
-          const show = visible(p);
-          return (
-            <Reveal
-              key={p.title}
-              delay={i * 60}
-              className="card-base proj-card"
-            >
-              <div
-                style={{
-                  padding: 24,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 16,
-                  height: "100%",
-                  opacity: show ? 1 : 0.15,
-                  transform: show ? "scale(1)" : "scale(0.97)",
-                  transition: "opacity 0.3s ease, transform 0.3s ease",
-                  pointerEvents: show ? "auto" : "none",
-                }}
-                data-wide={p.wide ? "true" : undefined}
-              >
-                <div className="proj-shape" style={{ transition: "transform 0.4s ease" }}>
-                  <Shape kind={p.shape} />
-                </div>
-                <h3 className="font-display" style={{ fontSize: "var(--type-card-title)", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
-                  {p.title}
-                </h3>
-                <p className="font-mono" style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.5, margin: 0 }}>
-                  {p.desc}
-                </p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {p.tags.map((t) => (
-                    <span key={t} style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", padding: "3px 9px", border: "1px solid var(--border-subtle)", borderRadius: 999, color: "var(--text-secondary)", letterSpacing: "0.08em" }}>
-                      {t}
-                    </span>
-                  ))}
-                </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "auto" }}>
-                  <span style={{ background: "var(--accent-warm)", color: "#1a0d00", fontFamily: "var(--font-data)", fontSize: "0.7rem", padding: "4px 10px", borderRadius: 3, fontWeight: 500 }}>
-                    {p.badge}
-                  </span>
-                </div>
-              </div>
-            </Reveal>
-          );
-        })}
+        <span>← drag</span>
+        <span style={{ color: "var(--accent-primary)" }}>● {projects.length} systems</span>
+        <span>scroll →</span>
       </div>
-
-      <style>{`
-        .proj-card:hover .proj-shape { transform: rotate(15deg) scale(1.05); }
-        @media (min-width: 900px) {
-          .proj-card:nth-child(5n) { grid-column: span 2; }
-        }
-      `}</style>
     </Section>
   );
 }
