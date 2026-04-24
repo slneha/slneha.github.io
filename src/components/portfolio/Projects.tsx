@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Section } from "./Section";
-import { CometCard } from "@/components/ui/comet-card";
+import CircularGallery from "@/components/CircularGallery";
 
 type Cat = "ALL" | "ML" | "CLOUD" | "NLP" | "SECURITY";
 type ShapeKind = "scatter" | "bar" | "wave" | "hex" | "nodes";
