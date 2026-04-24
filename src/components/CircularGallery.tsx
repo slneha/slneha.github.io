@@ -187,6 +187,7 @@ class Media {
   hoverCurrent: number = 0;
   dimTarget: number = 0;
   dimCurrent: number = 0;
+  hoverPulseStart: number = -1; // performance.now() when hover began, -1 = inactive
   baseOpacity: number = 1;
   baseScaleX: number = 1;
   baseScaleY: number = 1;
@@ -256,6 +257,7 @@ class Media {
         uniform sampler2D tMap;
         uniform float uBorderRadius;
         uniform float uHover;
+        uniform float uHoverTime;
         uniform float uOpacity;
         varying vec2 vUv;
         
@@ -273,20 +275,33 @@ class Media {
             vUv.x * ratio.x + (1.0 - ratio.x) * 0.5,
             vUv.y * ratio.y + (1.0 - ratio.y) * 0.5
           );
-          vec4 color = texture2D(tMap, uv);
-          
+
+          // Mild chromatic shift on the shape area only (top ~38% of the tile)
+          // so the body text stays crisp. Active during the 1s hover pulse.
+          float pulse = sin(uHoverTime * 3.14159) * uHover; // 0 → 1 → 0 over 1s
+          float shapeMask = 1.0 - smoothstep(0.34, 0.42, vUv.y);
+          float shift = 0.0025 * pulse * shapeMask;
+          vec4 color;
+          color.r = texture2D(tMap, uv + vec2(shift, 0.0)).r;
+          color.g = texture2D(tMap, uv).g;
+          color.b = texture2D(tMap, uv - vec2(shift, 0.0)).b;
+          color.a = texture2D(tMap, uv).a;
+
           float d = roundedBoxSDF(vUv - 0.5, vec2(0.5 - uBorderRadius), uBorderRadius);
-          
           float edgeSmooth = 0.002;
           float alpha = 1.0 - smoothstep(-edgeSmooth, edgeSmooth, d);
 
-          // Inner teal rim that intensifies with hover (glow on focused tile).
-          float rim = 1.0 - smoothstep(-0.06, 0.0, d);
           vec3 teal = vec3(0.0, 0.898, 0.764);
-          vec3 rgb = mix(color.rgb, color.rgb + teal * rim * 0.55, uHover);
+          vec3 rgb = color.rgb;
 
-          // Subtle global brightness lift on hover.
-          rgb += teal * 0.04 * uHover;
+          // Very subtle 1px-style teal outline on hover (replaces the heavy glow).
+          float outline = smoothstep(-0.006, -0.002, d) - smoothstep(-0.002, 0.0, d);
+          rgb = mix(rgb, teal, outline * 0.55 * uHover);
+
+          // 1s teal scanline sweep across the tile, restricted to the shape area.
+          float sweepY = 1.0 - uHoverTime * 1.4; // moves from top → past bottom in ~1s
+          float sweep = smoothstep(0.05, 0.0, abs(vUv.y - sweepY)) * shapeMask;
+          rgb += teal * sweep * 0.18 * uHover;
 
           gl_FragColor = vec4(rgb, alpha * uOpacity);
         }
@@ -297,6 +312,7 @@ class Media {
         uImageSizes: { value: [0, 0] },
         uBorderRadius: { value: this.borderRadius },
         uHover: { value: 0 },
+        uHoverTime: { value: 0 },
         uOpacity: { value: 1 }
       },
       transparent: true
@@ -385,6 +401,14 @@ class Media {
     }
     if (this.program.uniforms.uOpacity) {
       this.program.uniforms.uOpacity.value = 1 - this.dimCurrent * 0.6;
+    }
+    // 1-second hover pulse — clamped to [0, 1] then held at 1.
+    if (this.program.uniforms.uHoverTime) {
+      let t = 0;
+      if (this.hoverPulseStart > 0) {
+        t = Math.min(1, (performance.now() - this.hoverPulseStart) / 1000);
+      }
+      this.program.uniforms.uHoverTime.value = t;
     }
 
     this.speed = scroll.current - scroll.last;
@@ -660,6 +684,12 @@ class App {
     const hasFocus = bestIdx >= 0 && bestDist < this.medias[bestIdx].baseScaleX / 2;
     this.medias.forEach((m, i) => {
       const isFocused = hasFocus && i === bestIdx;
+      // Trigger the 1s pulse only on the focus-enter edge.
+      if (isFocused && m.hoverTarget !== 1) {
+        m.hoverPulseStart = performance.now();
+      } else if (!isFocused && m.hoverTarget === 1) {
+        m.hoverPulseStart = -1;
+      }
       m.hoverTarget = isFocused ? 1 : 0;
       m.dimTarget = hasFocus && !isFocused ? 1 : 0;
     });
@@ -670,6 +700,7 @@ class App {
     this.medias.forEach(m => {
       m.hoverTarget = 0;
       m.dimTarget = 0;
+      m.hoverPulseStart = -1;
     });
   }
 
