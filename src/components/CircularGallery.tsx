@@ -271,13 +271,22 @@ class Media {
       `,
       fragment: `
         precision highp float;
-        uniform vec2 uImageSizes;
-        uniform vec2 uPlaneSizes;
         uniform sampler2D tMap;
         uniform float uBorderRadius;
         uniform float uHover;
         uniform float uHoverTime;
         uniform float uOpacity;
+        // Sprite atlas: visible tile occupies the top-left rectangle
+        // (uTileFraction × atlas). Sprite strip lives below at uSpriteY,
+        // with uFrameSize per frame and uFrameCount frames laid horizontally.
+        // uShapeRect is the shape area in tile-UV space (x, y, w, h).
+        uniform vec2 uTileFraction;
+        uniform vec4 uShapeRect;
+        uniform vec2 uFrameSize;
+        uniform float uSpriteY;
+        uniform float uFrameCount;
+        // Fractional frame index (0..count). The integer part picks a frame.
+        uniform float uFrame;
         varying vec2 vUv;
         
         float roundedBoxSDF(vec2 p, vec2 b, float r) {
@@ -286,16 +295,32 @@ class Media {
         }
         
         void main() {
-          vec2 ratio = vec2(
-            min((uPlaneSizes.x / uPlaneSizes.y) / (uImageSizes.x / uImageSizes.y), 1.0),
-            min((uPlaneSizes.y / uPlaneSizes.x) / (uImageSizes.y / uImageSizes.x), 1.0)
-          );
-          vec2 uv = vec2(
-            vUv.x * ratio.x + (1.0 - ratio.x) * 0.5,
-            vUv.y * ratio.y + (1.0 - ratio.y) * 0.5
-          );
+          // Plane aspect already matches the visible tile, so vUv maps 1:1
+          // onto the tile. Convert to atlas-UV by scaling into the top-left
+          // tile region of the sprite atlas.
+          vec2 tileUv = vUv * uTileFraction;
+          vec4 color = texture2D(tMap, tileUv);
 
-          vec4 color = texture2D(tMap, uv);
+          // If we're inside the shape area, optionally overlay a sprite frame.
+          // uFrame >= 1.0 means "active" (frame 0 is the resting state, baked
+          // into the tile already, so we only swap in the strip for frames ≥1).
+          vec2 shapeMin = uShapeRect.xy;
+          vec2 shapeMax = shapeMin + uShapeRect.zw;
+          if (uFrame > 0.0001 &&
+              vUv.x > shapeMin.x && vUv.x < shapeMax.x &&
+              vUv.y > shapeMin.y && vUv.y < shapeMax.y) {
+            // Local UV inside the shape area, 0..1
+            vec2 localUv = (vUv - shapeMin) / uShapeRect.zw;
+            // Pick the integer frame; clamp so we never index past the strip.
+            float f = clamp(floor(uFrame), 0.0, uFrameCount - 1.0);
+            vec2 spriteUv = vec2(
+              (f + localUv.x) * uFrameSize.x,
+              uSpriteY + localUv.y * uFrameSize.y
+            );
+            // Replace just the shape art; the surrounding tile stays untouched.
+            vec4 sprite = texture2D(tMap, spriteUv);
+            color.rgb = mix(color.rgb, sprite.rgb, sprite.a);
+          }
 
           float d = roundedBoxSDF(vUv - 0.5, vec2(0.5 - uBorderRadius), uBorderRadius);
           float edgeSmooth = 0.002;
@@ -318,12 +343,36 @@ class Media {
       `,
       uniforms: {
         tMap: { value: texture },
-        uPlaneSizes: { value: [0, 0] },
-        uImageSizes: { value: [0, 0] },
         uBorderRadius: { value: this.borderRadius },
         uHover: { value: 0 },
         uHoverTime: { value: 0 },
-        uOpacity: { value: 1 }
+        uOpacity: { value: 1 },
+        uTileFraction: {
+          value: this.spriteAtlas
+            ? [
+                this.spriteAtlas.tileWidth / this.spriteAtlas.atlasWidth,
+                this.spriteAtlas.tileHeight / this.spriteAtlas.atlasHeight
+              ]
+            : [1, 1]
+        },
+        uShapeRect: {
+          value: this.spriteAtlas
+            ? [
+                this.spriteAtlas.shapeRect.x,
+                this.spriteAtlas.shapeRect.y,
+                this.spriteAtlas.shapeRect.w,
+                this.spriteAtlas.shapeRect.h
+              ]
+            : [0, 0, 0, 0]
+        },
+        uFrameSize: {
+          value: this.spriteAtlas
+            ? [this.spriteAtlas.spriteFrame.w, this.spriteAtlas.spriteFrame.h]
+            : [0, 0]
+        },
+        uSpriteY: { value: this.spriteAtlas ? this.spriteAtlas.spriteFrame.y : 0 },
+        uFrameCount: { value: this.spriteAtlas ? this.spriteAtlas.spriteFrame.count : 0 },
+        uFrame: { value: 0 }
       },
       transparent: true
     });
