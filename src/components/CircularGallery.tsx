@@ -342,6 +342,7 @@ class Media {
         this.gl.bindTexture(this.gl.TEXTURE_2D, (texture as any).texture);
         this.gl.texParameterf(this.gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
       }
+      this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
     };
   }
 
