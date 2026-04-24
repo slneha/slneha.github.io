@@ -498,7 +498,6 @@ class Media {
     this.baseScaleX = (this.viewport.width * (950 * this.scale)) / this.screen.width;
     this.plane.scale.y = this.baseScaleY;
     this.plane.scale.x = this.baseScaleX;
-    this.plane.program.uniforms.uPlaneSizes.value = [this.baseScaleX, this.baseScaleY];
     this.padding = 2.4;
     this.width = this.baseScaleX + this.padding;
     this.widthTotal = this.width * this.length;
