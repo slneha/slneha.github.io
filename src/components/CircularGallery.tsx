@@ -623,7 +623,8 @@ class App {
     bend: number = 1,
     textColor: string,
     borderRadius: number,
-    font: string
+    font: string,
+    spriteAtlas?: SpriteAtlas
   ) {
     const defaultItems = [
       {
@@ -692,7 +693,8 @@ class App {
         bend,
         textColor,
         borderRadius,
-        font
+        font,
+        spriteAtlas
       });
     });
   }
