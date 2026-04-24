@@ -154,7 +154,6 @@ interface MediaProps {
   textColor: string;
   borderRadius?: number;
   font?: string;
-  spriteAtlas?: SpriteAtlas;
 }
 
 class Media {
@@ -173,7 +172,6 @@ class Media {
   textColor: string;
   borderRadius: number;
   font?: string;
-  spriteAtlas?: SpriteAtlas;
   program!: Program;
   plane!: Mesh;
   title!: Title;
