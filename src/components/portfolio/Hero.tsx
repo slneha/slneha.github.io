@@ -1,3 +1,7 @@
+import { Suspense, lazy } from "react";
+
+const ModelViewer = lazy(() => import("@/components/ModelViewer"));
+
 const headline = [
   { word: "Neha", accent: false },
   { word: "Senthil", accent: false, br: true },
@@ -30,7 +34,48 @@ export function Hero() {
     >
       <div className="mesh-bg" style={{ position: "absolute", inset: 0, zIndex: 0 }} />
 
-      {/* SVG neural net — right */}
+      {/* Interactive 3D model — drag to rotate */}
+      <div
+        style={{
+          position: "absolute",
+          right: "-8vw",
+          top: 0,
+          bottom: 0,
+          width: "min(70vw, 900px)",
+          zIndex: 1,
+          pointerEvents: "auto",
+        }}
+        aria-hidden
+      >
+        <Suspense fallback={null}>
+          <ModelViewer
+            url="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+            width="100%"
+            height="100%"
+            defaultRotationX={-25}
+            defaultRotationY={15}
+            defaultZoom={1.4}
+            minZoomDistance={0.8}
+            maxZoomDistance={3}
+            enableMouseParallax
+            enableManualRotation
+            enableHoverRotation
+            enableManualZoom={false}
+            ambientIntensity={0.4}
+            keyLightIntensity={1.2}
+            fillLightIntensity={0.6}
+            rimLightIntensity={1.1}
+            environmentPreset="night"
+            autoFrame
+            fadeIn
+            autoRotate
+            autoRotateSpeed={0.15}
+            showScreenshotButton={false}
+          />
+        </Suspense>
+      </div>
+
+      {/* Faint SVG neural net overlay */}
       <svg
         viewBox="0 0 600 600"
         style={{
@@ -40,7 +85,7 @@ export function Hero() {
           transform: "translateY(-50%)",
           width: "45vw",
           maxWidth: 700,
-          opacity: 0.5,
+          opacity: 0.18,
           zIndex: 0,
           pointerEvents: "none",
         }}

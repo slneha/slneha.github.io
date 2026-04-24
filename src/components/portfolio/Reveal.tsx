@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { createElement, useEffect, useRef, type ReactNode } from "react";
 
 export function Reveal({
   children,
@@ -29,10 +29,9 @@ export function Reveal({
     io.observe(el);
     return () => io.disconnect();
   }, [delay]);
-  const Component = Tag as React.ElementType;
-  return (
-    <Component ref={ref} className={`reveal ${className}`}>
-      {children}
-    </Component>
+  return createElement(
+    Tag,
+    { ref, className: `reveal ${className}` },
+    children,
   );
 }
