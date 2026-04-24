@@ -220,23 +220,8 @@ function buildCardSVG(p: Project): string {
   const badgeText = escapeXML(p.badge);
   const badgeWidth = badgeText.length * 22 + 80;
 
-  // Build the sprite strip: FRAME_COUNT frames laid out horizontally below
-  // the visible tile. Each frame is FRAME_W × FRAME_H. The shader samples
-  // the active frame and overlays it onto the tile's shape area on hover.
-  const sprites = Array.from({ length: FRAME_COUNT })
-    .map((_, f) => {
-      const t = f / FRAME_COUNT; // 0 .. <1, exactly one cycle
-      return `<svg x="${f * FRAME_W}" y="${TILE_H}" width="${FRAME_W}" height="${FRAME_H}" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet">${shapeMarkup(p.shape, t)}</svg>`;
-    })
-    .join("");
-
-  // Frame 0 also drawn into the visible tile's shape box (the resting state
-  // shown when not hovered). The shader switches to sprite frames during the
-  // 1s hover pulse and snaps back to this baked frame after.
-  const restingShape = `<svg x="${SHAPE_X + 40}" y="${SHAPE_Y + 40}" width="${SHAPE_W - 80}" height="${SHAPE_H - 80}" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet">${shapeMarkup(p.shape, 0)}</svg>`;
-
   return `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ATLAS_W} ${ATLAS_H}" width="${ATLAS_W}" height="${ATLAS_H}">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TILE_W} ${TILE_H}" width="${TILE_W}" height="${TILE_H}">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#0d1117"/>
@@ -252,12 +237,14 @@ function buildCardSVG(p: Project): string {
     </linearGradient>
   </defs>
 
-  <!-- Visible tile background (transparent rest of atlas stays unused) -->
+  <!-- Card body -->
   <rect width="${TILE_W}" height="${TILE_H}" rx="48" fill="url(#bg)" stroke="rgba(0,229,195,0.18)" stroke-width="2"/>
 
-  <!-- Shape area frame + resting (frame 0) shape -->
+  <!-- Shape area -->
   <rect x="${SHAPE_X}" y="${SHAPE_Y}" width="${SHAPE_W}" height="${SHAPE_H}" rx="24" fill="url(#shapeBG)" stroke="rgba(0,229,195,0.12)" stroke-width="1.5"/>
-  ${restingShape}
+  <svg x="${SHAPE_X + 40}" y="${SHAPE_Y + 40}" width="${SHAPE_W - 80}" height="${SHAPE_H - 80}" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet">
+    ${shapeMarkup(p.shape)}
+  </svg>
 
   <!-- Section label above title -->
   <line x1="80" y1="850" x2="160" y2="850" stroke="${TEAL}" stroke-width="3"/>
@@ -287,9 +274,6 @@ function buildCardSVG(p: Project): string {
     <rect width="${badgeWidth}" height="80" rx="8" fill="url(#badgeBG)"/>
     <text x="${badgeWidth / 2}" y="54" font-family="Syne Mono, monospace" font-size="40" font-weight="700" fill="#1a0d00" text-anchor="middle">${badgeText}</text>
   </g>
-
-  <!-- Sprite strip (rendered below the visible tile in the texture atlas) -->
-  ${sprites}
 </svg>`.trim();
 }
 
