@@ -611,8 +611,7 @@ class App {
         bend,
         textColor,
         borderRadius,
-        font,
-        spriteAtlas
+        font
       });
     });
   }
@@ -771,7 +770,6 @@ interface CircularGalleryProps {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
-  spriteAtlas?: SpriteAtlas;
 }
 
 export default function CircularGallery({
@@ -781,8 +779,7 @@ export default function CircularGallery({
   borderRadius = 0.05,
   font = 'bold 30px Figtree',
   scrollSpeed = 2,
-  scrollEase = 0.05,
-  spriteAtlas
+  scrollEase = 0.05
 }: CircularGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -794,12 +791,11 @@ export default function CircularGallery({
       borderRadius,
       font,
       scrollSpeed,
-      scrollEase,
-      spriteAtlas
+      scrollEase
     });
     return () => {
       app.destroy();
     };
-  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase, spriteAtlas]);
+  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase]);
   return <div className="circular-gallery" ref={containerRef} />;
 }
