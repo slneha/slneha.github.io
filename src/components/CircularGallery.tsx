@@ -187,6 +187,7 @@ class Media {
   hoverCurrent: number = 0;
   dimTarget: number = 0;
   dimCurrent: number = 0;
+  hoverPulseStart: number = -1; // performance.now() when hover began, -1 = inactive
   baseOpacity: number = 1;
   baseScaleX: number = 1;
   baseScaleY: number = 1;
