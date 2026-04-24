@@ -102,6 +102,33 @@ const COLORS = {
 
 const FACE_PX = 512;
 
+/* Custom SVG cursors — teal crosshair to match the portfolio aesthetic */
+const CURSOR_IDLE =
+  "url(\"data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'>
+      <circle cx='16' cy='16' r='10' fill='none' stroke='%2300e5c3' stroke-width='1.5' opacity='0.9'/>
+      <circle cx='16' cy='16' r='1.5' fill='%2300e5c3'/>
+      <line x1='16' y1='2'  x2='16' y2='8'  stroke='%2300e5c3' stroke-width='1.2'/>
+      <line x1='16' y1='24' x2='16' y2='30' stroke='%2300e5c3' stroke-width='1.2'/>
+      <line x1='2'  y1='16' x2='8'  y2='16' stroke='%2300e5c3' stroke-width='1.2'/>
+      <line x1='24' y1='16' x2='30' y2='16' stroke='%2300e5c3' stroke-width='1.2'/>
+    </svg>`,
+  ) +
+  "\") 16 16, crosshair";
+
+const CURSOR_ACTIVE =
+  "url(\"data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'>
+      <circle cx='18' cy='18' r='14' fill='none' stroke='%2300e5c3' stroke-width='1' opacity='0.4'/>
+      <circle cx='18' cy='18' r='9'  fill='%2300e5c3' opacity='0.18'/>
+      <circle cx='18' cy='18' r='4'  fill='%2300e5c3'/>
+      <circle cx='18' cy='18' r='4'  fill='none' stroke='%236af0c8' stroke-width='1' opacity='0.9'/>
+    </svg>`,
+  ) +
+  "\") 18 18, crosshair";
+
 /**
  * Draws a face directly into a provided 2d context. Reusing the canvas (instead
  * of allocating a new one each frame) avoids GC pressure and lets Three.js skip
@@ -195,7 +222,7 @@ export function TerminalCube() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     container.appendChild(renderer.domElement);
-    renderer.domElement.style.cursor = "grab";
+    renderer.domElement.style.cursor = CURSOR_IDLE;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
@@ -253,7 +280,7 @@ export function TerminalCube() {
       lastX = e.clientX;
       lastY = e.clientY;
       renderer.domElement.setPointerCapture(e.pointerId);
-      renderer.domElement.style.cursor = "grabbing";
+      renderer.domElement.style.cursor = CURSOR_ACTIVE;
     };
     const onPointerMove = (e: PointerEvent) => {
       if (!isDragging) return;
@@ -269,7 +296,7 @@ export function TerminalCube() {
     const onPointerUp = (e: PointerEvent) => {
       isDragging = false;
       renderer.domElement.releasePointerCapture(e.pointerId);
-      renderer.domElement.style.cursor = "grab";
+      renderer.domElement.style.cursor = CURSOR_IDLE;
     };
     renderer.domElement.addEventListener("pointerdown", onPointerDown);
     renderer.domElement.addEventListener("pointermove", onPointerMove);
