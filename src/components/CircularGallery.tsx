@@ -684,6 +684,12 @@ class App {
     const hasFocus = bestIdx >= 0 && bestDist < this.medias[bestIdx].baseScaleX / 2;
     this.medias.forEach((m, i) => {
       const isFocused = hasFocus && i === bestIdx;
+      // Trigger the 1s pulse only on the focus-enter edge.
+      if (isFocused && m.hoverTarget !== 1) {
+        m.hoverPulseStart = performance.now();
+      } else if (!isFocused && m.hoverTarget === 1) {
+        m.hoverPulseStart = -1;
+      }
       m.hoverTarget = isFocused ? 1 : 0;
       m.dimTarget = hasFocus && !isFocused ? 1 : 0;
     });
@@ -694,6 +700,7 @@ class App {
     this.medias.forEach(m => {
       m.hoverTarget = 0;
       m.dimTarget = 0;
+      m.hoverPulseStart = -1;
     });
   }
 
