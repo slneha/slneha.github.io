@@ -183,6 +183,11 @@ class Media {
   speed: number = 0;
   isBefore: boolean = false;
   isAfter: boolean = false;
+  hoverTarget: number = 0;
+  hoverCurrent: number = 0;
+  baseScaleX: number = 1;
+  baseScaleY: number = 1;
+  baseRotZ: number = 0;
 
   constructor({
     geometry,
@@ -222,7 +227,9 @@ class Media {
 
   createShader() {
     const texture = new Texture(this.gl, {
-      generateMipmaps: true
+      generateMipmaps: true,
+      minFilter: this.gl.LINEAR_MIPMAP_LINEAR,
+      magFilter: this.gl.LINEAR
     });
     this.program = new Program(this.gl, {
       depthTest: false,
@@ -284,6 +291,16 @@ class Media {
     img.src = this.image;
     img.onload = () => {
       texture.image = img;
+      // Anisotropic filtering for sharp text at oblique angles
+      const ext =
+        this.gl.getExtension('EXT_texture_filter_anisotropic') ||
+        this.gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+        this.gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+      if (ext) {
+        const max = this.gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, (texture as any).texture);
+        this.gl.texParameterf(this.gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
+      }
       this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
     };
   }
@@ -315,7 +332,7 @@ class Media {
 
     if (this.bend === 0) {
       this.plane.position.y = 0;
-      this.plane.rotation.z = 0;
+      this.baseRotZ = 0;
     } else {
       const B_abs = Math.abs(this.bend);
       const R = (H * H + B_abs * B_abs) / (2 * B_abs);
@@ -324,16 +341,24 @@ class Media {
       const arc = R - Math.sqrt(R * R - effectiveX * effectiveX);
       if (this.bend > 0) {
         this.plane.position.y = -arc;
-        this.plane.rotation.z = -Math.sign(x) * Math.asin(effectiveX / R);
+        this.baseRotZ = -Math.sign(x) * Math.asin(effectiveX / R);
       } else {
         this.plane.position.y = arc;
-        this.plane.rotation.z = Math.sign(x) * Math.asin(effectiveX / R);
+        this.baseRotZ = Math.sign(x) * Math.asin(effectiveX / R);
       }
     }
 
+    // Smoothly approach hover state
+    this.hoverCurrent = lerp(this.hoverCurrent, this.hoverTarget, 0.12);
+    const hoverScale = 1 + this.hoverCurrent * 0.06;
+    const hoverTilt = this.hoverCurrent * 0.18; // ~10deg in radians
+    this.plane.scale.x = this.baseScaleX * hoverScale;
+    this.plane.scale.y = this.baseScaleY * hoverScale;
+    this.plane.rotation.z = this.baseRotZ + hoverTilt;
+
     this.speed = scroll.current - scroll.last;
 
-    const planeOffset = this.plane.scale.x / 2;
+    const planeOffset = this.baseScaleX / 2;
     const viewportOffset = this.viewport.width / 2;
     this.isBefore = this.plane.position.x + planeOffset < -viewportOffset;
     this.isAfter = this.plane.position.x - planeOffset > viewportOffset;
@@ -356,11 +381,13 @@ class Media {
       }
     }
     this.scale = this.screen.height / 1500;
-    this.plane.scale.y = (this.viewport.height * (900 * this.scale)) / this.screen.height;
-    this.plane.scale.x = (this.viewport.width * (700 * this.scale)) / this.screen.width;
-    this.plane.program.uniforms.uPlaneSizes.value = [this.plane.scale.x, this.plane.scale.y];
-    this.padding = 2;
-    this.width = this.plane.scale.x + this.padding;
+    this.baseScaleY = (this.viewport.height * (1200 * this.scale)) / this.screen.height;
+    this.baseScaleX = (this.viewport.width * (950 * this.scale)) / this.screen.width;
+    this.plane.scale.y = this.baseScaleY;
+    this.plane.scale.x = this.baseScaleX;
+    this.plane.program.uniforms.uPlaneSizes.value = [this.baseScaleX, this.baseScaleY];
+    this.padding = 2.4;
+    this.width = this.baseScaleX + this.padding;
     this.widthTotal = this.width * this.length;
     this.x = this.width * this.index;
   }
@@ -403,6 +430,8 @@ class App {
   boundOnTouchDown!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchMove!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchUp!: () => void;
+  boundOnHoverMove!: (e: MouseEvent) => void;
+  boundOnHoverLeave!: () => void;
 
   isDown: boolean = false;
   start: number = 0;
@@ -561,8 +590,14 @@ class App {
 
   onWheel(e: Event) {
     const wheelEvent = e as WheelEvent;
+    const dx = wheelEvent.deltaX;
+    const dy = wheelEvent.deltaY;
+    // Only intercept clearly-horizontal wheel intent (trackpad swipe or shift+wheel).
+    // Vertical scroll falls through to the page so the user is never trapped.
+    const horizontalIntent = wheelEvent.shiftKey || Math.abs(dx) > Math.abs(dy);
+    if (!horizontalIntent) return;
     wheelEvent.preventDefault();
-    const delta = wheelEvent.deltaY || (wheelEvent as any).wheelDelta || (wheelEvent as any).detail;
+    const delta = dx || dy;
     this.scroll.target += (delta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.2;
     this.onCheckDebounce();
   }
@@ -573,6 +608,32 @@ class App {
     const itemIndex = Math.round(Math.abs(this.scroll.target) / width);
     const item = width * itemIndex;
     this.scroll.target = this.scroll.target < 0 ? -item : item;
+  }
+
+  onHoverMove(e: MouseEvent) {
+    if (!this.medias || !this.medias.length) return;
+    const rect = this.container.getBoundingClientRect();
+    // Convert pixel x to viewport-units x (same space as plane.position.x).
+    const px = e.clientX - rect.left;
+    const ndcX = (px / rect.width) * 2 - 1;
+    const worldX = (ndcX * this.viewport.width) / 2;
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    this.medias.forEach((m, i) => {
+      const d = Math.abs(m.plane.position.x - worldX);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    });
+    this.medias.forEach((m, i) => {
+      m.hoverTarget = i === bestIdx && bestDist < m.baseScaleX / 2 ? 1 : 0;
+    });
+  }
+
+  onHoverLeave() {
+    if (!this.medias) return;
+    this.medias.forEach(m => (m.hoverTarget = 0));
   }
 
   onResize() {
@@ -610,6 +671,8 @@ class App {
     this.boundOnTouchDown = this.onTouchDown.bind(this);
     this.boundOnTouchMove = this.onTouchMove.bind(this);
     this.boundOnTouchUp = this.onTouchUp.bind(this);
+    this.boundOnHoverMove = this.onHoverMove.bind(this);
+    this.boundOnHoverLeave = this.onHoverLeave.bind(this);
     window.addEventListener('resize', this.boundOnResize);
     this.container.addEventListener('wheel', this.boundOnWheel, { passive: false });
     this.container.addEventListener('mousedown', this.boundOnTouchDown);
@@ -618,6 +681,8 @@ class App {
     this.container.addEventListener('touchstart', this.boundOnTouchDown, { passive: true });
     window.addEventListener('touchmove', this.boundOnTouchMove);
     window.addEventListener('touchend', this.boundOnTouchUp);
+    this.container.addEventListener('mousemove', this.boundOnHoverMove);
+    this.container.addEventListener('mouseleave', this.boundOnHoverLeave);
   }
 
   destroy() {
@@ -630,6 +695,8 @@ class App {
     this.container.removeEventListener('touchstart', this.boundOnTouchDown);
     window.removeEventListener('touchmove', this.boundOnTouchMove);
     window.removeEventListener('touchend', this.boundOnTouchUp);
+    this.container.removeEventListener('mousemove', this.boundOnHoverMove);
+    this.container.removeEventListener('mouseleave', this.boundOnHoverLeave);
     if (this.renderer && this.renderer.gl && this.renderer.gl.canvas.parentNode) {
       this.renderer.gl.canvas.parentNode.removeChild(this.renderer.gl.canvas as HTMLCanvasElement);
     }
