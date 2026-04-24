@@ -100,50 +100,45 @@ const COLORS = {
 
 /* ----------------------------- Face renderer ---------------------------- */
 
-const FACE_PX = 1024;
+const FACE_PX = 512;
 
-function makeFaceCanvas(face: FaceContent, charsTyped: number, blink: boolean) {
-  const c = document.createElement("canvas");
-  c.width = FACE_PX;
-  c.height = FACE_PX;
-  const ctx = c.getContext("2d")!;
-
+/**
+ * Draws a face directly into a provided 2d context. Reusing the canvas (instead
+ * of allocating a new one each frame) avoids GC pressure and lets Three.js skip
+ * the texture re-upload setup work.
+ */
+function drawFace(
+  ctx: CanvasRenderingContext2D,
+  face: FaceContent,
+  charsTyped: number,
+  blink: boolean,
+) {
   // Background
-  const grad = ctx.createLinearGradient(0, 0, 0, FACE_PX);
-  grad.addColorStop(0, "#0d1117");
-  grad.addColorStop(1, "#080c10");
-  ctx.fillStyle = grad;
+  ctx.fillStyle = "#0b0f14";
   ctx.fillRect(0, 0, FACE_PX, FACE_PX);
 
-  // Subtle scanlines
-  ctx.fillStyle = "rgba(0,229,195,0.025)";
-  for (let y = 0; y < FACE_PX; y += 4) ctx.fillRect(0, y, FACE_PX, 1);
-
-  // Border + glow
+  // Border (no expensive shadowBlur)
   ctx.strokeStyle = COLORS.border;
-  ctx.lineWidth = 6;
-  ctx.shadowColor = COLORS.border;
-  ctx.shadowBlur = 30;
-  ctx.strokeRect(8, 8, FACE_PX - 16, FACE_PX - 16);
-  ctx.shadowBlur = 0;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(4, 4, FACE_PX - 8, FACE_PX - 8);
 
   // Title bar
   ctx.fillStyle = "rgba(0,229,195,0.08)";
-  ctx.fillRect(8, 8, FACE_PX - 16, 80);
+  ctx.fillRect(4, 4, FACE_PX - 8, 40);
   ctx.fillStyle = COLORS.prompt;
-  ctx.font = "600 32px ui-monospace, 'JetBrains Mono', monospace";
-  ctx.fillText("● ● ●", 40, 60);
+  ctx.font = "600 16px ui-monospace, 'JetBrains Mono', monospace";
+  ctx.fillText("● ● ●", 20, 30);
   ctx.fillStyle = COLORS.dim;
-  ctx.font = "500 28px ui-monospace, monospace";
+  ctx.font = "500 14px ui-monospace, monospace";
   ctx.textAlign = "center";
-  ctx.fillText(face.prompt, FACE_PX / 2, 60);
+  ctx.fillText(face.prompt, FACE_PX / 2, 30);
   ctx.textAlign = "left";
 
   // Body text
-  const padX = 56;
-  let y = 160;
-  const lineH = 56;
-  ctx.font = "500 32px ui-monospace, 'JetBrains Mono', monospace";
+  const padX = 28;
+  let y = 80;
+  const lineH = 28;
+  ctx.font = "500 16px ui-monospace, 'JetBrains Mono', monospace";
   let used = 0;
   let cursorPos: { x: number; y: number } | null = null;
 
@@ -170,20 +165,18 @@ function makeFaceCanvas(face: FaceContent, charsTyped: number, blink: boolean) {
 
     if (visible.length < line.text.length) {
       const w = ctx.measureText(visible).width;
-      cursorPos = { x: padX + w + 4, y };
+      cursorPos = { x: padX + w + 2, y };
       break;
     }
     y += lineH;
-    if (y > FACE_PX - 80) break;
+    if (y > FACE_PX - 40) break;
   }
 
   // Cursor block
   if (cursorPos && blink) {
     ctx.fillStyle = COLORS.cursor;
-    ctx.fillRect(cursorPos.x, cursorPos.y - 30, 16, 36);
+    ctx.fillRect(cursorPos.x, cursorPos.y - 14, 8, 18);
   }
-
-  return c;
 }
 
 /* ------------------------------ Component ------------------------------ */
@@ -208,18 +201,27 @@ export function TerminalCube() {
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
     camera.position.set(0, 0, 6.2);
 
-    // Build textures + materials
+    // Build textures + materials. Each face owns ONE persistent canvas + 2D ctx
+    // that we redraw into; no per-frame allocations.
+    const canvases: HTMLCanvasElement[] = [];
+    const ctxs: CanvasRenderingContext2D[] = [];
     const textures: THREE.CanvasTexture[] = [];
     const materials: THREE.MeshBasicMaterial[] = [];
     for (let i = 0; i < 6; i++) {
-      const canvas = makeFaceCanvas(FACES[i], 0, true);
+      const canvas = document.createElement("canvas");
+      canvas.width = FACE_PX;
+      canvas.height = FACE_PX;
+      const ctx = canvas.getContext("2d")!;
+      drawFace(ctx, FACES[i], 0, true);
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = false;
+      canvases.push(canvas);
+      ctxs.push(ctx);
       textures.push(tex);
-      materials.push(
-        new THREE.MeshBasicMaterial({ map: tex, transparent: true }),
-      );
+      materials.push(new THREE.MeshBasicMaterial({ map: tex }));
     }
 
     const geo = new THREE.BoxGeometry(2.4, 2.4, 2.4);
@@ -278,8 +280,10 @@ export function TerminalCube() {
     const totalChars = FACES.map((f) =>
       f.lines.reduce((s, l) => s + l.text.length + 4, 0),
     );
-    const typedAt: number[] = FACES.map(() => 0);
+    const typedAt: number[] = FACES.map(() => -1);
     const phaseStart = performance.now();
+    let lastFaceUpdate = 0;
+    let lastBlink = false;
 
     const onResize = () => {
       const w = container.clientWidth;
@@ -290,6 +294,8 @@ export function TerminalCube() {
     };
     window.addEventListener("resize", onResize);
 
+    // Throttle face redraws to ~10 fps. The cube itself still spins at full 60.
+    const FACE_REDRAW_INTERVAL_MS = 100;
     let raf = 0;
     const tick = () => {
       const now = performance.now();
@@ -302,40 +308,27 @@ export function TerminalCube() {
         if (Math.abs(velY) < 0.001) velY = 0.0015;
         rotY += velY;
         rotX += velX;
-        // Drift rotX gently back toward neutral
         rotX += (-0.2 - rotX) * 0.005;
       }
       cube.rotation.x = rotX;
       cube.rotation.y = rotY;
 
-      // Update each face's typed-out characters
-      const blink = Math.floor(elapsed * 2) % 2 === 0;
-      for (let i = 0; i < 6; i++) {
-        const speed = 28; // chars per second
-        const target = Math.min(
-          totalChars[i] + 60, // include trailing pause then loop
-          Math.floor(elapsed * speed) % (totalChars[i] + 80),
-        );
-        if (target !== typedAt[i]) {
-          typedAt[i] = target;
-          const canvas = makeFaceCanvas(
-            FACES[i],
-            Math.min(target, totalChars[i]),
-            blink,
-          );
-          (textures[i].image as HTMLCanvasElement)
-            .getContext("2d")!
-            .drawImage(canvas, 0, 0);
-          textures[i].needsUpdate = true;
-        } else {
-          // still flip blink
-          const ctx = (textures[i].image as HTMLCanvasElement).getContext("2d")!;
-          ctx.drawImage(
-            makeFaceCanvas(FACES[i], Math.min(typedAt[i], totalChars[i]), blink),
-            0,
-            0,
-          );
-          textures[i].needsUpdate = true;
+      // Throttle face updates: only redraw when typing progresses or blink flips.
+      if (now - lastFaceUpdate >= FACE_REDRAW_INTERVAL_MS) {
+        lastFaceUpdate = now;
+        const blink = Math.floor(elapsed * 2) % 2 === 0;
+        const blinkChanged = blink !== lastBlink;
+        lastBlink = blink;
+        const speed = 28;
+        for (let i = 0; i < 6; i++) {
+          const target =
+            Math.floor(elapsed * speed) % (totalChars[i] + 80);
+          const clamped = Math.min(target, totalChars[i]);
+          if (clamped !== typedAt[i] || blinkChanged) {
+            typedAt[i] = clamped;
+            drawFace(ctxs[i], FACES[i], clamped, blink);
+            textures[i].needsUpdate = true;
+          }
         }
       }
 
