@@ -224,7 +224,8 @@ class Media {
     bend,
     textColor,
     borderRadius = 0,
-    font
+    font,
+    spriteAtlas
   }: MediaProps) {
     this.geometry = geometry;
     this.gl = gl;
@@ -240,6 +241,7 @@ class Media {
     this.textColor = textColor;
     this.borderRadius = borderRadius;
     this.font = font;
+    this.spriteAtlas = spriteAtlas;
     this.createShader();
     this.createMesh();
     this.createTitle();
