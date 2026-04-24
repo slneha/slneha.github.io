@@ -139,21 +139,6 @@ interface Viewport {
   height: number;
 }
 
-export interface SpriteAtlas {
-  /** Visible tile width within the texture atlas, in px. */
-  tileWidth: number;
-  /** Visible tile height within the texture atlas, in px. */
-  tileHeight: number;
-  /** Full atlas width in px. */
-  atlasWidth: number;
-  /** Full atlas height in px. */
-  atlasHeight: number;
-  /** Shape area expressed as fractions of the visible tile (0..1). */
-  shapeRect: { x: number; y: number; w: number; h: number };
-  /** Sprite strip metadata. w/h/y are fractions of the atlas; count is integer. */
-  spriteFrame: { w: number; h: number; y: number; count: number };
-}
-
 interface MediaProps {
   geometry: Plane;
   gl: GL;
@@ -169,7 +154,6 @@ interface MediaProps {
   textColor: string;
   borderRadius?: number;
   font?: string;
-  spriteAtlas?: SpriteAtlas;
 }
 
 class Media {
@@ -188,7 +172,6 @@ class Media {
   textColor: string;
   borderRadius: number;
   font?: string;
-  spriteAtlas?: SpriteAtlas;
   program!: Program;
   plane!: Mesh;
   title!: Title;
@@ -224,8 +207,7 @@ class Media {
     bend,
     textColor,
     borderRadius = 0,
-    font,
-    spriteAtlas
+    font
   }: MediaProps) {
     this.geometry = geometry;
     this.gl = gl;
@@ -241,7 +223,6 @@ class Media {
     this.textColor = textColor;
     this.borderRadius = borderRadius;
     this.font = font;
-    this.spriteAtlas = spriteAtlas;
     this.createShader();
     this.createMesh();
     this.createTitle();
@@ -271,22 +252,13 @@ class Media {
       `,
       fragment: `
         precision highp float;
+        uniform vec2 uImageSizes;
+        uniform vec2 uPlaneSizes;
         uniform sampler2D tMap;
         uniform float uBorderRadius;
         uniform float uHover;
         uniform float uHoverTime;
         uniform float uOpacity;
-        // Sprite atlas: visible tile occupies the top-left rectangle
-        // (uTileFraction × atlas). Sprite strip lives below at uSpriteY,
-        // with uFrameSize per frame and uFrameCount frames laid horizontally.
-        // uShapeRect is the shape area in tile-UV space (x, y, w, h).
-        uniform vec2 uTileFraction;
-        uniform vec4 uShapeRect;
-        uniform vec2 uFrameSize;
-        uniform float uSpriteY;
-        uniform float uFrameCount;
-        // Fractional frame index (0..count). The integer part picks a frame.
-        uniform float uFrame;
         varying vec2 vUv;
         
         float roundedBoxSDF(vec2 p, vec2 b, float r) {
@@ -295,32 +267,16 @@ class Media {
         }
         
         void main() {
-          // Plane aspect already matches the visible tile, so vUv maps 1:1
-          // onto the tile. Convert to atlas-UV by scaling into the top-left
-          // tile region of the sprite atlas.
-          vec2 tileUv = vUv * uTileFraction;
-          vec4 color = texture2D(tMap, tileUv);
+          vec2 ratio = vec2(
+            min((uPlaneSizes.x / uPlaneSizes.y) / (uImageSizes.x / uImageSizes.y), 1.0),
+            min((uPlaneSizes.y / uPlaneSizes.x) / (uImageSizes.y / uImageSizes.x), 1.0)
+          );
+          vec2 uv = vec2(
+            vUv.x * ratio.x + (1.0 - ratio.x) * 0.5,
+            vUv.y * ratio.y + (1.0 - ratio.y) * 0.5
+          );
 
-          // If we're inside the shape area, optionally overlay a sprite frame.
-          // uFrame >= 1.0 means "active" (frame 0 is the resting state, baked
-          // into the tile already, so we only swap in the strip for frames ≥1).
-          vec2 shapeMin = uShapeRect.xy;
-          vec2 shapeMax = shapeMin + uShapeRect.zw;
-          if (uFrame > 0.0001 &&
-              vUv.x > shapeMin.x && vUv.x < shapeMax.x &&
-              vUv.y > shapeMin.y && vUv.y < shapeMax.y) {
-            // Local UV inside the shape area, 0..1
-            vec2 localUv = (vUv - shapeMin) / uShapeRect.zw;
-            // Pick the integer frame; clamp so we never index past the strip.
-            float f = clamp(floor(uFrame), 0.0, uFrameCount - 1.0);
-            vec2 spriteUv = vec2(
-              (f + localUv.x) * uFrameSize.x,
-              uSpriteY + localUv.y * uFrameSize.y
-            );
-            // Replace just the shape art; the surrounding tile stays untouched.
-            vec4 sprite = texture2D(tMap, spriteUv);
-            color.rgb = mix(color.rgb, sprite.rgb, sprite.a);
-          }
+          vec4 color = texture2D(tMap, uv);
 
           float d = roundedBoxSDF(vUv - 0.5, vec2(0.5 - uBorderRadius), uBorderRadius);
           float edgeSmooth = 0.002;
@@ -343,36 +299,12 @@ class Media {
       `,
       uniforms: {
         tMap: { value: texture },
+        uPlaneSizes: { value: [0, 0] },
+        uImageSizes: { value: [0, 0] },
         uBorderRadius: { value: this.borderRadius },
         uHover: { value: 0 },
         uHoverTime: { value: 0 },
-        uOpacity: { value: 1 },
-        uTileFraction: {
-          value: this.spriteAtlas
-            ? [
-                this.spriteAtlas.tileWidth / this.spriteAtlas.atlasWidth,
-                this.spriteAtlas.tileHeight / this.spriteAtlas.atlasHeight
-              ]
-            : [1, 1]
-        },
-        uShapeRect: {
-          value: this.spriteAtlas
-            ? [
-                this.spriteAtlas.shapeRect.x,
-                this.spriteAtlas.shapeRect.y,
-                this.spriteAtlas.shapeRect.w,
-                this.spriteAtlas.shapeRect.h
-              ]
-            : [0, 0, 0, 0]
-        },
-        uFrameSize: {
-          value: this.spriteAtlas
-            ? [this.spriteAtlas.spriteFrame.w, this.spriteAtlas.spriteFrame.h]
-            : [0, 0]
-        },
-        uSpriteY: { value: this.spriteAtlas ? this.spriteAtlas.spriteFrame.y : 0 },
-        uFrameCount: { value: this.spriteAtlas ? this.spriteAtlas.spriteFrame.count : 0 },
-        uFrame: { value: 0 }
+        uOpacity: { value: 1 }
       },
       transparent: true
     });
@@ -391,6 +323,7 @@ class Media {
         this.gl.bindTexture(this.gl.TEXTURE_2D, (texture as any).texture);
         this.gl.texParameterf(this.gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
       }
+      this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
     };
   }
 
@@ -467,17 +400,6 @@ class Media {
         t = Math.min(1, (performance.now() - this.hoverPulseStart) / 1000);
       }
       this.program.uniforms.uHoverTime.value = t;
-      // Drive sprite frame index: advance through frames over the same 1s
-      // window. After the pulse ends we snap back to frame 0 (resting state
-      // baked into the tile), so the shapes return to their rest pose.
-      if (this.spriteAtlas && this.program.uniforms.uFrame) {
-        const count = this.spriteAtlas.spriteFrame.count;
-        if (t > 0 && t < 1) {
-          this.program.uniforms.uFrame.value = t * count;
-        } else {
-          this.program.uniforms.uFrame.value = 0;
-        }
-      }
     }
 
     this.speed = scroll.current - scroll.last;
@@ -509,6 +431,7 @@ class Media {
     this.baseScaleX = (this.viewport.width * (950 * this.scale)) / this.screen.width;
     this.plane.scale.y = this.baseScaleY;
     this.plane.scale.x = this.baseScaleX;
+    this.plane.program.uniforms.uPlaneSizes.value = [this.baseScaleX, this.baseScaleY];
     this.padding = 2.4;
     this.width = this.baseScaleX + this.padding;
     this.widthTotal = this.width * this.length;
@@ -524,7 +447,6 @@ interface AppConfig {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
-  spriteAtlas?: SpriteAtlas;
 }
 
 class App {
@@ -569,8 +491,7 @@ class App {
       borderRadius = 0,
       font = 'bold 30px Figtree',
       scrollSpeed = 2,
-      scrollEase = 0.05,
-      spriteAtlas
+      scrollEase = 0.05
     }: AppConfig
   ) {
     document.documentElement.classList.remove('no-js');
@@ -583,12 +504,10 @@ class App {
     this.createScene();
     this.onResize();
     this.createGeometry();
-    this.createMedias(items, bend, textColor, borderRadius, font, spriteAtlas);
+    this.createMedias(items, bend, textColor, borderRadius, font);
     this.update();
     this.addEventListeners();
   }
-
-  spriteAtlas?: SpriteAtlas;
 
   createRenderer() {
     this.renderer = new Renderer({
@@ -623,8 +542,7 @@ class App {
     bend: number = 1,
     textColor: string,
     borderRadius: number,
-    font: string,
-    spriteAtlas?: SpriteAtlas
+    font: string
   ) {
     const defaultItems = [
       {
@@ -693,8 +611,7 @@ class App {
         bend,
         textColor,
         borderRadius,
-        font,
-        spriteAtlas
+        font
       });
     });
   }
@@ -853,7 +770,6 @@ interface CircularGalleryProps {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
-  spriteAtlas?: SpriteAtlas;
 }
 
 export default function CircularGallery({
@@ -863,8 +779,7 @@ export default function CircularGallery({
   borderRadius = 0.05,
   font = 'bold 30px Figtree',
   scrollSpeed = 2,
-  scrollEase = 0.05,
-  spriteAtlas
+  scrollEase = 0.05
 }: CircularGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -876,12 +791,11 @@ export default function CircularGallery({
       borderRadius,
       font,
       scrollSpeed,
-      scrollEase,
-      spriteAtlas
+      scrollEase
     });
     return () => {
       app.destroy();
     };
-  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase, spriteAtlas]);
+  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase]);
   return <div className="circular-gallery" ref={containerRef} />;
 }
