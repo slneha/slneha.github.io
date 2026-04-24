@@ -467,6 +467,17 @@ class Media {
         t = Math.min(1, (performance.now() - this.hoverPulseStart) / 1000);
       }
       this.program.uniforms.uHoverTime.value = t;
+      // Drive sprite frame index: advance through frames over the same 1s
+      // window. After the pulse ends we snap back to frame 0 (resting state
+      // baked into the tile), so the shapes return to their rest pose.
+      if (this.spriteAtlas && this.program.uniforms.uFrame) {
+        const count = this.spriteAtlas.spriteFrame.count;
+        if (t > 0 && t < 1) {
+          this.program.uniforms.uFrame.value = t * count;
+        } else {
+          this.program.uniforms.uFrame.value = 0;
+        }
+      }
     }
 
     this.speed = scroll.current - scroll.last;
