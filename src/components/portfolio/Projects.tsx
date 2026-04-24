@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Section } from "./Section";
-import { Reveal } from "./Reveal";
 import { CometCard } from "@/components/ui/comet-card";
 
 type Cat = "ALL" | "ML" | "CLOUD" | "NLP" | "SECURITY";
