@@ -59,81 +59,97 @@ const projects: Project[] = [
 
 /* ---------- SVG shape generators (static markup for the tile texture) ---------- */
 
+/**
+ * Each shape renders to a 200x100 internal coordinate system. We embed it inside
+ * a nested <svg viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet"> so it
+ * scales uniformly into whatever box we give it on the tile (no horizontal stretch).
+ * Colors come straight from the design tokens: teal #00e5c3 + amber #f5a623.
+ */
+const TEAL = "#00e5c3";
+const TEAL_SOFT = "#6af0c8";
+const AMBER = "#f5a623";
+
 function scatterSVG() {
   let out = "";
-  for (let i = 0; i < 28; i++) {
-    const x = (i * 37) % 200;
-    const y = ((i * 53) % 70) + 5;
-    const r = 1.5 + (i % 3);
-    const fill = i % 4 === 0 ? "#00E5C3" : "#FF7A1A";
-    out += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" opacity="0.85"/>`;
+  for (let i = 0; i < 36; i++) {
+    const x = ((i * 37) % 200) + ((i * 13) % 7) - 3;
+    const y = ((i * 53) % 80) + 10;
+    const r = 1.5 + (i % 3) * 0.8;
+    const fill = i % 5 === 0 ? AMBER : i % 2 === 0 ? TEAL : TEAL_SOFT;
+    out += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" opacity="${0.55 + (i % 4) * 0.12}"/>`;
   }
   return out;
 }
 
 function barSVG() {
-  const heights = [40, 65, 30, 55, 70, 45, 60, 35, 75, 50];
+  const heights = [38, 62, 28, 54, 70, 44, 60, 34, 76, 50, 66, 40];
+  const w = 12;
+  const gap = 4;
+  const total = heights.length * (w + gap) - gap;
+  const offsetX = (200 - total) / 2;
   return heights
     .map((h, i) => {
-      const fill = i % 2 === 0 ? "#00E5C3" : "#FF7A1A";
-      return `<rect x="${i * 20 + 4}" y="${80 - h}" width="12" height="${h}" fill="${fill}" opacity="0.8"/>`;
+      const fill = i % 3 === 0 ? AMBER : TEAL;
+      const opacity = i % 3 === 0 ? 0.95 : 0.85;
+      return `<rect x="${offsetX + i * (w + gap)}" y="${95 - h}" width="${w}" height="${h}" rx="1.5" fill="${fill}" opacity="${opacity}"/>`;
     })
     .join("");
 }
 
 function waveSVG() {
-  const wave = (phase: number, amp: number) =>
-    Array.from({ length: 80 })
+  const wave = (phase: number, amp: number, yc: number) =>
+    Array.from({ length: 100 })
       .map((_, i) => {
-        const x = (i / 79) * 200;
-        const y = 40 + Math.sin(i / 4 + phase) * amp;
+        const x = (i / 99) * 200;
+        const y = yc + Math.sin(i / 5 + phase) * amp;
         return `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
       })
       .join(" ");
-  let bars = "";
-  for (let i = 0; i < 24; i++) {
-    bars += `<rect x="${i * 8 + 2}" y="32" width="2" height="16" rx="1" fill="#00E5C3" opacity="0.45"/>`;
-  }
   return `
-    <path d="${wave(0, 18)}" stroke="#00E5C3" stroke-width="1.5" fill="none" opacity="0.95"/>
-    <path d="${wave(1.5, 12)}" stroke="#FF7A1A" stroke-width="1" fill="none" opacity="0.6"/>
-    ${bars}
+    <path d="${wave(0, 22, 50)}" stroke="${TEAL}" stroke-width="2" fill="none" opacity="0.95" stroke-linecap="round"/>
+    <path d="${wave(1.6, 14, 50)}" stroke="${TEAL_SOFT}" stroke-width="1.5" fill="none" opacity="0.7" stroke-linecap="round"/>
+    <path d="${wave(3.1, 8, 50)}" stroke="${AMBER}" stroke-width="1.2" fill="none" opacity="0.55" stroke-linecap="round"/>
   `;
 }
 
 function hexSVG() {
-  return [20, 60, 100, 140, 180]
+  return [25, 65, 105, 145, 185]
     .map((cx, i) => {
       const pts = Array.from({ length: 6 })
         .map((_, j) => {
-          const a = (Math.PI / 3) * j;
-          return `${cx + Math.cos(a) * 18},${40 + Math.sin(a) * 18}`;
+          const a = (Math.PI / 3) * j - Math.PI / 6;
+          return `${cx + Math.cos(a) * 22},${50 + Math.sin(a) * 22}`;
         })
         .join(" ");
-      const stroke = i % 2 ? "#00E5C3" : "#FF7A1A";
-      return `<polygon points="${pts}" fill="none" stroke="${stroke}" stroke-width="1.2" opacity="0.85"/>`;
+      const stroke = i === 2 ? AMBER : TEAL;
+      const sw = i === 2 ? 2 : 1.4;
+      return `<polygon points="${pts}" fill="none" stroke="${stroke}" stroke-width="${sw}" opacity="${0.6 + (i % 2) * 0.3}"/>`;
     })
     .join("");
 }
 
 function nodesSVG() {
   const nodes: [number, number][] = [
-    [20, 20],
-    [60, 60],
-    [100, 25],
-    [140, 55],
-    [180, 30],
+    [22, 28],
+    [62, 70],
+    [104, 32],
+    [148, 64],
+    [184, 24],
   ];
   let edges = "";
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
       const [x1, y1] = nodes[i];
       const [x2, y2] = nodes[j];
-      edges += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#00E5C3" stroke-width="0.6" opacity="0.45"/>`;
+      edges += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${TEAL}" stroke-width="0.8" opacity="0.4"/>`;
     }
   }
   const pts = nodes
-    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#00E5C3"/>`)
+    .map(
+      ([x, y], i) =>
+        `<circle cx="${x}" cy="${y}" r="${5 + (i % 2) * 1.5}" fill="${i === 2 ? AMBER : TEAL}" opacity="0.95"/>` +
+        `<circle cx="${x}" cy="${y}" r="${10 + (i % 2) * 2}" fill="none" stroke="${i === 2 ? AMBER : TEAL}" stroke-width="0.8" opacity="0.35"/>`,
+    )
     .join("");
   return edges + pts;
 }
@@ -181,48 +197,66 @@ function wrapText(text: string, maxChars: number, maxLines: number): string[] {
 }
 
 function buildCardSVG(p: Project): string {
-  const titleLines = wrapText(p.title, 22, 2);
-  const descLines = wrapText(p.desc, 38, 4);
-  const tagSpacing = 22;
-  let tagsX = 80;
+  const titleLines = wrapText(p.title, 20, 2);
+  const descLines = wrapText(p.desc, 36, 4);
+
+  // Tags
+  const tagSpacing = 24;
+  let tagsX = 90;
   const tags = p.tags
     .map((t) => {
-      const w = t.length * 14 + 36;
-      const rect = `<rect x="${tagsX}" y="1480" width="${w}" height="46" rx="23" fill="none" stroke="#3a3a3a" stroke-width="1.5"/>
-        <text x="${tagsX + w / 2}" y="1510" font-family="JetBrains Mono, monospace" font-size="22" fill="#a0a0a0" text-anchor="middle" letter-spacing="2">${escapeXML(t)}</text>`;
+      const w = t.length * 18 + 60;
+      const rect = `<rect x="${tagsX}" y="1500" width="${w}" height="60" rx="30" fill="none" stroke="rgba(0,229,195,0.35)" stroke-width="2"/>
+        <text x="${tagsX + w / 2}" y="1540" font-family="DM Mono, monospace" font-size="28" fill="${TEAL_SOFT}" text-anchor="middle" letter-spacing="3">${escapeXML(t).toUpperCase()}</text>`;
       tagsX += w + tagSpacing;
       return rect;
     })
     .join("");
 
   const badgeText = escapeXML(p.badge);
-  const badgeWidth = badgeText.length * 16 + 60;
+  const badgeWidth = badgeText.length * 22 + 80;
+
+  // Shape area: 1240 wide x 620 tall, centered horizontally
+  const shapeBoxW = TILE_W - 160;
+  const shapeBoxH = 640;
+  const shapeBoxX = 80;
+  const shapeBoxY = 100;
 
   return `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TILE_W} ${TILE_H}" width="${TILE_W}" height="${TILE_H}">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#161616"/>
-      <stop offset="1" stop-color="#0e0e0e"/>
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#080c10"/>
     </linearGradient>
     <linearGradient id="shapeBG" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#00E5C3" stop-opacity="0.06"/>
-      <stop offset="1" stop-color="#00E5C3" stop-opacity="0"/>
+      <stop offset="0" stop-color="#00e5c3" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#00e5c3" stop-opacity="0.0"/>
+    </linearGradient>
+    <linearGradient id="badgeBG" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f5a623"/>
+      <stop offset="1" stop-color="#ffc15a"/>
     </linearGradient>
   </defs>
-  <rect width="${TILE_W}" height="${TILE_H}" rx="40" fill="url(#bg)" stroke="#262626" stroke-width="2"/>
+
+  <!-- Card body -->
+  <rect width="${TILE_W}" height="${TILE_H}" rx="48" fill="url(#bg)" stroke="rgba(0,229,195,0.18)" stroke-width="2"/>
 
   <!-- Shape area -->
-  <rect x="80" y="100" width="${TILE_W - 160}" height="600" rx="20" fill="url(#shapeBG)"/>
-  <g transform="translate(80, 200) scale(6.2, 4.0)">
+  <rect x="${shapeBoxX}" y="${shapeBoxY}" width="${shapeBoxW}" height="${shapeBoxH}" rx="24" fill="url(#shapeBG)" stroke="rgba(0,229,195,0.12)" stroke-width="1.5"/>
+  <svg x="${shapeBoxX + 40}" y="${shapeBoxY + 40}" width="${shapeBoxW - 80}" height="${shapeBoxH - 80}" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet">
     ${shapeMarkup(p.shape)}
-  </g>
+  </svg>
+
+  <!-- Section label above title -->
+  <line x1="80" y1="850" x2="160" y2="850" stroke="${TEAL}" stroke-width="3"/>
+  <text x="180" y="858" font-family="DM Mono, monospace" font-size="26" fill="${TEAL}" letter-spacing="4">PROJECT</text>
 
   <!-- Title -->
   ${titleLines
     .map(
       (line, i) =>
-        `<text x="80" y="${900 + i * 110}" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="92" fill="#f5f5f5">${escapeXML(line)}</text>`,
+        `<text x="80" y="${950 + i * 120}" font-family="Syne, sans-serif" font-weight="800" font-size="100" fill="#e8f0f5" letter-spacing="-2">${escapeXML(line)}</text>`,
     )
     .join("")}
 
@@ -230,7 +264,7 @@ function buildCardSVG(p: Project): string {
   ${descLines
     .map(
       (line, i) =>
-        `<text x="80" y="${1180 + i * 56}" font-family="JetBrains Mono, monospace" font-size="38" fill="#a8a8a8">${escapeXML(line)}</text>`,
+        `<text x="80" y="${1240 + i * 58}" font-family="DM Mono, monospace" font-size="42" fill="#7a8fa6">${escapeXML(line)}</text>`,
     )
     .join("")}
 
@@ -238,9 +272,9 @@ function buildCardSVG(p: Project): string {
   ${tags}
 
   <!-- Badge -->
-  <g transform="translate(${TILE_W - 80 - badgeWidth}, 1620)">
-    <rect width="${badgeWidth}" height="64" rx="6" fill="#FF7A1A"/>
-    <text x="${badgeWidth / 2}" y="42" font-family="JetBrains Mono, monospace" font-size="32" font-weight="500" fill="#1a0d00" text-anchor="middle">${badgeText}</text>
+  <g transform="translate(${TILE_W - 90 - badgeWidth}, 1640)">
+    <rect width="${badgeWidth}" height="80" rx="8" fill="url(#badgeBG)"/>
+    <text x="${badgeWidth / 2}" y="54" font-family="Syne Mono, monospace" font-size="40" font-weight="700" fill="#1a0d00" text-anchor="middle">${badgeText}</text>
   </g>
 </svg>`.trim();
 }
