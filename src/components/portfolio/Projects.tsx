@@ -2,24 +2,15 @@ import { useMemo, useState } from "react";
 import { Section } from "./Section";
 import CircularGallery from "@/components/CircularGallery";
 
-/* ---------- Sprite sheet config ---------- */
-const FRAME_COUNT = 24;          // frames in the hover animation (~24 fps over 1s)
-const FRAME_W = 300;             // each sprite frame, in px
-const FRAME_H = 150;
-
-/* Visible tile dimensions */
+/* Tile dimensions (logical px in the baked SVG). */
 const TILE_W = 1400;
 const TILE_H = 1800;
 
-/* Shape area inside the visible tile (must match the <rect> below) */
+/* Shape area inside the tile (must match the <rect> below). */
 const SHAPE_X = 80;
 const SHAPE_Y = 100;
 const SHAPE_W = TILE_W - 160;    // 1240
 const SHAPE_H = 640;
-
-/* Full atlas dimensions: visible tile on top, sprite strip below it */
-const ATLAS_W = Math.max(TILE_W, FRAME_COUNT * FRAME_W);   // 7200
-const ATLAS_H = TILE_H + FRAME_H;                          // 1950
 
 type Cat = "ALL" | "ML" | "CLOUD" | "NLP" | "SECURITY";
 type ShapeKind = "scatter" | "bar" | "wave" | "hex" | "nodes";
