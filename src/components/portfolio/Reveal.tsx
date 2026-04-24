@@ -29,10 +29,10 @@ export function Reveal({
     io.observe(el);
     return () => io.disconnect();
   }, [delay]);
-  const Component = Tag as React.ElementType;
-  return (
-    <Component ref={ref} className={`reveal ${className}`}>
-      {children}
-    </Component>
-  );
+  const Component = Tag as unknown as React.ElementType;
+  const props: Record<string, unknown> = {
+    ref,
+    className: `reveal ${className}`,
+  };
+  return <Component {...props}>{children}</Component>;
 }
