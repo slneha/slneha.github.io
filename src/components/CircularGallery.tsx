@@ -278,11 +278,11 @@ class Media {
 
           // 1s hover pulse: 0 → 1 → 0
           float pulse = sin(uHoverTime * 3.14159) * uHover;
-          // Restrict the *image distortion* to the shape area (top ~38%) so
-          // body text stays crisp.
-          float shapeMask = 1.0 - smoothstep(0.34, 0.42, vUv.y);
+          // Hard-cut mask: the shape sits in vUv.y ∈ [0.05, 0.41], the title
+          // starts at vUv.y ≈ 0.47. Cut hard at 0.42 so text never wobbles.
+          float shapeMask = step(vUv.y, 0.42);
 
-          // Animated chromatic shift + tiny vertical ripple on the shape art.
+          // Chromatic shift + tiny vertical ripple, ONLY on the shape art.
           float ripple = sin(vUv.x * 18.0 - uHoverTime * 6.2832) * 0.004 * pulse * shapeMask;
           float shift = 0.006 * pulse * shapeMask;
           vec2 uvR = uv + vec2(shift, ripple);
