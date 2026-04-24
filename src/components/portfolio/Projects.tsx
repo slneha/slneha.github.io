@@ -197,48 +197,66 @@ function wrapText(text: string, maxChars: number, maxLines: number): string[] {
 }
 
 function buildCardSVG(p: Project): string {
-  const titleLines = wrapText(p.title, 22, 2);
-  const descLines = wrapText(p.desc, 38, 4);
-  const tagSpacing = 22;
-  let tagsX = 80;
+  const titleLines = wrapText(p.title, 20, 2);
+  const descLines = wrapText(p.desc, 36, 4);
+
+  // Tags
+  const tagSpacing = 24;
+  let tagsX = 90;
   const tags = p.tags
     .map((t) => {
-      const w = t.length * 14 + 36;
-      const rect = `<rect x="${tagsX}" y="1480" width="${w}" height="46" rx="23" fill="none" stroke="#3a3a3a" stroke-width="1.5"/>
-        <text x="${tagsX + w / 2}" y="1510" font-family="JetBrains Mono, monospace" font-size="22" fill="#a0a0a0" text-anchor="middle" letter-spacing="2">${escapeXML(t)}</text>`;
+      const w = t.length * 18 + 60;
+      const rect = `<rect x="${tagsX}" y="1500" width="${w}" height="60" rx="30" fill="none" stroke="rgba(0,229,195,0.35)" stroke-width="2"/>
+        <text x="${tagsX + w / 2}" y="1540" font-family="DM Mono, monospace" font-size="28" fill="${TEAL_SOFT}" text-anchor="middle" letter-spacing="3">${escapeXML(t).toUpperCase()}</text>`;
       tagsX += w + tagSpacing;
       return rect;
     })
     .join("");
 
   const badgeText = escapeXML(p.badge);
-  const badgeWidth = badgeText.length * 16 + 60;
+  const badgeWidth = badgeText.length * 22 + 80;
+
+  // Shape area: 1240 wide x 620 tall, centered horizontally
+  const shapeBoxW = TILE_W - 160;
+  const shapeBoxH = 640;
+  const shapeBoxX = 80;
+  const shapeBoxY = 100;
 
   return `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TILE_W} ${TILE_H}" width="${TILE_W}" height="${TILE_H}">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#161616"/>
-      <stop offset="1" stop-color="#0e0e0e"/>
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#080c10"/>
     </linearGradient>
     <linearGradient id="shapeBG" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#00E5C3" stop-opacity="0.06"/>
-      <stop offset="1" stop-color="#00E5C3" stop-opacity="0"/>
+      <stop offset="0" stop-color="#00e5c3" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#00e5c3" stop-opacity="0.0"/>
+    </linearGradient>
+    <linearGradient id="badgeBG" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f5a623"/>
+      <stop offset="1" stop-color="#ffc15a"/>
     </linearGradient>
   </defs>
-  <rect width="${TILE_W}" height="${TILE_H}" rx="40" fill="url(#bg)" stroke="#262626" stroke-width="2"/>
+
+  <!-- Card body -->
+  <rect width="${TILE_W}" height="${TILE_H}" rx="48" fill="url(#bg)" stroke="rgba(0,229,195,0.18)" stroke-width="2"/>
 
   <!-- Shape area -->
-  <rect x="80" y="100" width="${TILE_W - 160}" height="600" rx="20" fill="url(#shapeBG)"/>
-  <g transform="translate(80, 200) scale(6.2, 4.0)">
+  <rect x="${shapeBoxX}" y="${shapeBoxY}" width="${shapeBoxW}" height="${shapeBoxH}" rx="24" fill="url(#shapeBG)" stroke="rgba(0,229,195,0.12)" stroke-width="1.5"/>
+  <svg x="${shapeBoxX + 40}" y="${shapeBoxY + 40}" width="${shapeBoxW - 80}" height="${shapeBoxH - 80}" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet">
     ${shapeMarkup(p.shape)}
-  </g>
+  </svg>
+
+  <!-- Section label above title -->
+  <line x1="80" y1="850" x2="160" y2="850" stroke="${TEAL}" stroke-width="3"/>
+  <text x="180" y="858" font-family="DM Mono, monospace" font-size="26" fill="${TEAL}" letter-spacing="4">PROJECT</text>
 
   <!-- Title -->
   ${titleLines
     .map(
       (line, i) =>
-        `<text x="80" y="${900 + i * 110}" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="92" fill="#f5f5f5">${escapeXML(line)}</text>`,
+        `<text x="80" y="${950 + i * 120}" font-family="Syne, sans-serif" font-weight="800" font-size="100" fill="#e8f0f5" letter-spacing="-2">${escapeXML(line)}</text>`,
     )
     .join("")}
 
@@ -246,7 +264,7 @@ function buildCardSVG(p: Project): string {
   ${descLines
     .map(
       (line, i) =>
-        `<text x="80" y="${1180 + i * 56}" font-family="JetBrains Mono, monospace" font-size="38" fill="#a8a8a8">${escapeXML(line)}</text>`,
+        `<text x="80" y="${1240 + i * 58}" font-family="DM Mono, monospace" font-size="42" fill="#7a8fa6">${escapeXML(line)}</text>`,
     )
     .join("")}
 
@@ -254,9 +272,9 @@ function buildCardSVG(p: Project): string {
   ${tags}
 
   <!-- Badge -->
-  <g transform="translate(${TILE_W - 80 - badgeWidth}, 1620)">
-    <rect width="${badgeWidth}" height="64" rx="6" fill="#FF7A1A"/>
-    <text x="${badgeWidth / 2}" y="42" font-family="JetBrains Mono, monospace" font-size="32" font-weight="500" fill="#1a0d00" text-anchor="middle">${badgeText}</text>
+  <g transform="translate(${TILE_W - 90 - badgeWidth}, 1640)">
+    <rect width="${badgeWidth}" height="80" rx="8" fill="url(#badgeBG)"/>
+    <text x="${badgeWidth / 2}" y="54" font-family="Syne Mono, monospace" font-size="40" font-weight="700" fill="#1a0d00" text-anchor="middle">${badgeText}</text>
   </g>
 </svg>`.trim();
 }
