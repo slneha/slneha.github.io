@@ -657,14 +657,20 @@ class App {
         bestIdx = i;
       }
     });
+    const hasFocus = bestIdx >= 0 && bestDist < this.medias[bestIdx].baseScaleX / 2;
     this.medias.forEach((m, i) => {
-      m.hoverTarget = i === bestIdx && bestDist < m.baseScaleX / 2 ? 1 : 0;
+      const isFocused = hasFocus && i === bestIdx;
+      m.hoverTarget = isFocused ? 1 : 0;
+      m.dimTarget = hasFocus && !isFocused ? 1 : 0;
     });
   }
 
   onHoverLeave() {
     if (!this.medias) return;
-    this.medias.forEach(m => (m.hoverTarget = 0));
+    this.medias.forEach(m => {
+      m.hoverTarget = 0;
+      m.dimTarget = 0;
+    });
   }
 
   onResize() {
