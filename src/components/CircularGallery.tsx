@@ -256,6 +256,7 @@ class Media {
         uniform sampler2D tMap;
         uniform float uBorderRadius;
         uniform float uHover;
+        uniform float uHoverTime;
         uniform float uOpacity;
         varying vec2 vUv;
         
@@ -273,20 +274,33 @@ class Media {
             vUv.x * ratio.x + (1.0 - ratio.x) * 0.5,
             vUv.y * ratio.y + (1.0 - ratio.y) * 0.5
           );
-          vec4 color = texture2D(tMap, uv);
-          
+
+          // Mild chromatic shift on the shape area only (top ~38% of the tile)
+          // so the body text stays crisp. Active during the 1s hover pulse.
+          float pulse = sin(uHoverTime * 3.14159) * uHover; // 0 → 1 → 0 over 1s
+          float shapeMask = 1.0 - smoothstep(0.34, 0.42, vUv.y);
+          float shift = 0.0025 * pulse * shapeMask;
+          vec4 color;
+          color.r = texture2D(tMap, uv + vec2(shift, 0.0)).r;
+          color.g = texture2D(tMap, uv).g;
+          color.b = texture2D(tMap, uv - vec2(shift, 0.0)).b;
+          color.a = texture2D(tMap, uv).a;
+
           float d = roundedBoxSDF(vUv - 0.5, vec2(0.5 - uBorderRadius), uBorderRadius);
-          
           float edgeSmooth = 0.002;
           float alpha = 1.0 - smoothstep(-edgeSmooth, edgeSmooth, d);
 
-          // Inner teal rim that intensifies with hover (glow on focused tile).
-          float rim = 1.0 - smoothstep(-0.06, 0.0, d);
           vec3 teal = vec3(0.0, 0.898, 0.764);
-          vec3 rgb = mix(color.rgb, color.rgb + teal * rim * 0.55, uHover);
+          vec3 rgb = color.rgb;
 
-          // Subtle global brightness lift on hover.
-          rgb += teal * 0.04 * uHover;
+          // Very subtle 1px-style teal outline on hover (replaces the heavy glow).
+          float outline = smoothstep(-0.006, -0.002, d) - smoothstep(-0.002, 0.0, d);
+          rgb = mix(rgb, teal, outline * 0.55 * uHover);
+
+          // 1s teal scanline sweep across the tile, restricted to the shape area.
+          float sweepY = 1.0 - uHoverTime * 1.4; // moves from top → past bottom in ~1s
+          float sweep = smoothstep(0.05, 0.0, abs(vUv.y - sweepY)) * shapeMask;
+          rgb += teal * sweep * 0.18 * uHover;
 
           gl_FragColor = vec4(rgb, alpha * uOpacity);
         }
@@ -297,6 +311,7 @@ class Media {
         uImageSizes: { value: [0, 0] },
         uBorderRadius: { value: this.borderRadius },
         uHover: { value: 0 },
+        uHoverTime: { value: 0 },
         uOpacity: { value: 1 }
       },
       transparent: true
