@@ -256,6 +256,7 @@ class Media {
         uniform sampler2D tMap;
         uniform float uBorderRadius;
         uniform float uHover;
+        uniform float uOpacity;
         varying vec2 vUv;
         
         float roundedBoxSDF(vec2 p, vec2 b, float r) {
@@ -287,7 +288,7 @@ class Media {
           // Subtle global brightness lift on hover.
           rgb += teal * 0.04 * uHover;
 
-          gl_FragColor = vec4(rgb, alpha);
+          gl_FragColor = vec4(rgb, alpha * uOpacity);
         }
       `,
       uniforms: {
@@ -295,7 +296,8 @@ class Media {
         uPlaneSizes: { value: [0, 0] },
         uImageSizes: { value: [0, 0] },
         uBorderRadius: { value: this.borderRadius },
-        uHover: { value: 0 }
+        uHover: { value: 0 },
+        uOpacity: { value: 1 }
       },
       transparent: true
     });
