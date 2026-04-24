@@ -200,7 +200,6 @@ export function Projects() {
 
       <div
         style={{
-          width: "100%",
           height: "min(640px, 75vh)",
           position: "relative",
           marginInline: "calc(50% - 50vw)",
