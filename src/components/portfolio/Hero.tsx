@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
 
-const ModelViewer = lazy(() => import("@/components/ModelViewer"));
+const TerminalCube = lazy(() => import("@/components/portfolio/TerminalCube"));
 
 const headline = [
   { word: "Neha", accent: false },
@@ -34,44 +34,20 @@ export function Hero() {
     >
       <div className="mesh-bg" style={{ position: "absolute", inset: 0, zIndex: 0 }} />
 
-      {/* Interactive 3D model — drag to rotate */}
+      {/* Interactive 3D terminal cube — drag to rotate */}
       <div
         style={{
           position: "absolute",
-          right: "-8vw",
+          right: "-4vw",
           top: 0,
           bottom: 0,
-          width: "min(70vw, 900px)",
+          width: "min(60vw, 760px)",
           zIndex: 1,
           pointerEvents: "auto",
         }}
-        aria-hidden
       >
         <Suspense fallback={null}>
-          <ModelViewer
-            url="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
-            width="100%"
-            height="100%"
-            defaultRotationX={-25}
-            defaultRotationY={15}
-            defaultZoom={1.4}
-            minZoomDistance={0.8}
-            maxZoomDistance={3}
-            enableMouseParallax
-            enableManualRotation
-            enableHoverRotation
-            enableManualZoom={false}
-            ambientIntensity={0.4}
-            keyLightIntensity={1.2}
-            fillLightIntensity={0.6}
-            rimLightIntensity={1.1}
-            environmentPreset="night"
-            autoFrame
-            fadeIn
-            autoRotate
-            autoRotateSpeed={0.15}
-            showScreenshotButton={false}
-          />
+          <TerminalCube />
         </Suspense>
       </div>
 
