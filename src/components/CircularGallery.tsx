@@ -524,6 +524,7 @@ interface AppConfig {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  spriteAtlas?: SpriteAtlas;
 }
 
 class App {
@@ -568,7 +569,8 @@ class App {
       borderRadius = 0,
       font = 'bold 30px Figtree',
       scrollSpeed = 2,
-      scrollEase = 0.05
+      scrollEase = 0.05,
+      spriteAtlas
     }: AppConfig
   ) {
     document.documentElement.classList.remove('no-js');
@@ -581,10 +583,12 @@ class App {
     this.createScene();
     this.onResize();
     this.createGeometry();
-    this.createMedias(items, bend, textColor, borderRadius, font);
+    this.createMedias(items, bend, textColor, borderRadius, font, spriteAtlas);
     this.update();
     this.addEventListeners();
   }
+
+  spriteAtlas?: SpriteAtlas;
 
   createRenderer() {
     this.renderer = new Renderer({
