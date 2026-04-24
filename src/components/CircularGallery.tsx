@@ -276,23 +276,7 @@ class Media {
             vUv.y * ratio.y + (1.0 - ratio.y) * 0.5
           );
 
-          // 1s hover pulse: 0 → 1 → 0
-          float pulse = sin(uHoverTime * 3.14159) * uHover;
-          // Hard-cut mask: the shape sits in vUv.y ∈ [0.05, 0.41], the title
-          // starts at vUv.y ≈ 0.47. Cut hard at 0.42 so text never wobbles.
-          float shapeMask = step(vUv.y, 0.42);
-
-          // Chromatic shift + tiny vertical ripple, ONLY on the shape art.
-          float ripple = sin(vUv.x * 18.0 - uHoverTime * 6.2832) * 0.004 * pulse * shapeMask;
-          float shift = 0.006 * pulse * shapeMask;
-          vec2 uvR = uv + vec2(shift, ripple);
-          vec2 uvG = uv + vec2(0.0,   ripple);
-          vec2 uvB = uv + vec2(-shift, ripple);
-          vec4 color;
-          color.r = texture2D(tMap, uvR).r;
-          color.g = texture2D(tMap, uvG).g;
-          color.b = texture2D(tMap, uvB).b;
-          color.a = texture2D(tMap, uv).a;
+          vec4 color = texture2D(tMap, uv);
 
           float d = roundedBoxSDF(vUv - 0.5, vec2(0.5 - uBorderRadius), uBorderRadius);
           float edgeSmooth = 0.002;
