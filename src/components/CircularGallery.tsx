@@ -185,6 +185,9 @@ class Media {
   isAfter: boolean = false;
   hoverTarget: number = 0;
   hoverCurrent: number = 0;
+  dimTarget: number = 0;
+  dimCurrent: number = 0;
+  baseOpacity: number = 1;
   baseScaleX: number = 1;
   baseScaleY: number = 1;
   baseRotZ: number = 0;
@@ -252,6 +255,8 @@ class Media {
         uniform vec2 uPlaneSizes;
         uniform sampler2D tMap;
         uniform float uBorderRadius;
+        uniform float uHover;
+        uniform float uOpacity;
         varying vec2 vUv;
         
         float roundedBoxSDF(vec2 p, vec2 b, float r) {
@@ -274,15 +279,25 @@ class Media {
           
           float edgeSmooth = 0.002;
           float alpha = 1.0 - smoothstep(-edgeSmooth, edgeSmooth, d);
-          
-          gl_FragColor = vec4(color.rgb, alpha);
+
+          // Inner teal rim that intensifies with hover (glow on focused tile).
+          float rim = 1.0 - smoothstep(-0.06, 0.0, d);
+          vec3 teal = vec3(0.0, 0.898, 0.764);
+          vec3 rgb = mix(color.rgb, color.rgb + teal * rim * 0.55, uHover);
+
+          // Subtle global brightness lift on hover.
+          rgb += teal * 0.04 * uHover;
+
+          gl_FragColor = vec4(rgb, alpha * uOpacity);
         }
       `,
       uniforms: {
         tMap: { value: texture },
         uPlaneSizes: { value: [0, 0] },
         uImageSizes: { value: [0, 0] },
-        uBorderRadius: { value: this.borderRadius }
+        uBorderRadius: { value: this.borderRadius },
+        uHover: { value: 0 },
+        uOpacity: { value: 1 }
       },
       transparent: true
     });
@@ -348,13 +363,29 @@ class Media {
       }
     }
 
-    // Smoothly approach hover state
-    this.hoverCurrent = lerp(this.hoverCurrent, this.hoverTarget, 0.12);
-    const hoverScale = 1 + this.hoverCurrent * 0.06;
-    const hoverTilt = this.hoverCurrent * 0.18; // ~10deg in radians
-    this.plane.scale.x = this.baseScaleX * hoverScale;
-    this.plane.scale.y = this.baseScaleY * hoverScale;
-    this.plane.rotation.z = this.baseRotZ + hoverTilt;
+    // Smoothly approach hover + dim states
+    this.hoverCurrent = lerp(this.hoverCurrent, this.hoverTarget, 0.14);
+    this.dimCurrent = lerp(this.dimCurrent, this.dimTarget, 0.12);
+
+    // Focused tile: lift toward camera (z) + slight scale; non-focused: push back + fade.
+    const lift = this.hoverCurrent * 0.55;          // focused → forward
+    const recede = this.dimCurrent * -0.35;          // others  → back
+    this.plane.position.z = lift + recede;
+
+    const hoverScale = 1 + this.hoverCurrent * 0.05;
+    const dimScale = 1 - this.dimCurrent * 0.04;
+    const s = hoverScale * dimScale;
+    this.plane.scale.x = this.baseScaleX * s;
+    this.plane.scale.y = this.baseScaleY * s;
+    this.plane.rotation.z = this.baseRotZ;
+
+    // Drive shader uniforms: glow on focused tile, opacity fade on non-focused.
+    if (this.program.uniforms.uHover) {
+      this.program.uniforms.uHover.value = this.hoverCurrent;
+    }
+    if (this.program.uniforms.uOpacity) {
+      this.program.uniforms.uOpacity.value = 1 - this.dimCurrent * 0.6;
+    }
 
     this.speed = scroll.current - scroll.last;
 
@@ -626,14 +657,20 @@ class App {
         bestIdx = i;
       }
     });
+    const hasFocus = bestIdx >= 0 && bestDist < this.medias[bestIdx].baseScaleX / 2;
     this.medias.forEach((m, i) => {
-      m.hoverTarget = i === bestIdx && bestDist < m.baseScaleX / 2 ? 1 : 0;
+      const isFocused = hasFocus && i === bestIdx;
+      m.hoverTarget = isFocused ? 1 : 0;
+      m.dimTarget = hasFocus && !isFocused ? 1 : 0;
     });
   }
 
   onHoverLeave() {
     if (!this.medias) return;
-    this.medias.forEach(m => (m.hoverTarget = 0));
+    this.medias.forEach(m => {
+      m.hoverTarget = 0;
+      m.dimTarget = 0;
+    });
   }
 
   onResize() {
