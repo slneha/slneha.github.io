@@ -402,6 +402,14 @@ class Media {
     if (this.program.uniforms.uOpacity) {
       this.program.uniforms.uOpacity.value = 1 - this.dimCurrent * 0.6;
     }
+    // 1-second hover pulse — clamped to [0, 1] then held at 1.
+    if (this.program.uniforms.uHoverTime) {
+      let t = 0;
+      if (this.hoverPulseStart > 0) {
+        t = Math.min(1, (performance.now() - this.hoverPulseStart) / 1000);
+      }
+      this.program.uniforms.uHoverTime.value = t;
+    }
 
     this.speed = scroll.current - scroll.last;
 
