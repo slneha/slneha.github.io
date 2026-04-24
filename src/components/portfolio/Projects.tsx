@@ -526,6 +526,9 @@ export function Projects() {
       </div>
 
       <style>{`
+        .curved-scroller { scrollbar-width: none; }
+        .curved-scroller::-webkit-scrollbar { display: none; }
+        .curved-card { will-change: transform, opacity; }
         @keyframes twinkle {
           0%, 100% { opacity: 0.3; transform: scale(0.9); }
           50% { opacity: 1; transform: scale(1.4); }
