@@ -91,26 +91,37 @@ export function Experience() {
         <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
           <Card
             glow
-            company="Amazon Development Center"
-            role="SDE Intern"
-            date="Jun 2025 – Aug 2025"
+            company="AWS Bedrock"
+            role="Software Developer — Data Plane"
+            date="Present"
             bullets={[
-              "Designed and shipped a distributed inference pipeline serving production traffic across multiple AWS regions.",
-              "Optimized model packaging and request batching, reducing per-call compute cost by 15–20%.",
-              "Partnered with senior scientists on instrumentation, profiling, and rollout safety for the new path.",
+              "Developer on the Bedrock Data Plane team working across AWS Textract and BDA Rekognition.",
+              "Build and operate document and vision inference services running production traffic at AWS scale.",
+              "Previously interned on the neighboring Bedrock Control Plane team before joining Data Plane full-time.",
             ]}
             impact={{ percent: 18, label: "Compute cost reduction" }}
           />
           <Card
             company="Spectrax Corp"
             role="ML Engineering Intern"
-            date="Summer 2024"
+            date="Summer 2023"
             bullets={[
               "Built feature pipelines and forecasting models for time-series operational data.",
               "Improved short-horizon forecast accuracy by 12% over the existing baseline.",
               "Owned the eval harness and weekly model review cadence with stakeholders.",
             ]}
             impact={{ percent: 12, label: "Forecast accuracy lift" }}
+          />
+          <Card
+            company="University Teaching"
+            role="Data Science Teaching Assistant"
+            date="2 semesters"
+            bullets={[
+              "TA for the undergraduate Data Science course, leading 2 sections end-to-end.",
+              "Taught probability, statistical inference, regression, and the full ML modeling workflow.",
+              "Held weekly office hours and built supplemental material — earned strong student reviews for depth and clarity.",
+            ]}
+            impact={{ percent: 100, label: "Course mastery" }}
           />
         </div>
       </div>
