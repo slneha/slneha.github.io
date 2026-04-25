@@ -78,15 +78,27 @@ function Card({
 }
 
 export function Experience() {
+  const dotCount = 4;
   return (
     <Section id="experience" label="/experience" number="01">
       <div style={{ display: "grid", gridTemplateColumns: "60px 1fr", gap: 32 }}>
         <div style={{ position: "relative" }}>
-          <div style={{ position: "sticky", top: 120, height: 400 }}>
-            <div style={{ width: 1, height: "100%", background: "var(--border-active)", marginLeft: 8 }} />
-            <div style={{ position: "absolute", top: 0, left: 4, width: 9, height: 9, borderRadius: "50%", background: "var(--accent-primary)", boxShadow: "var(--glow-strong)" }} />
-            <div style={{ position: "absolute", top: 280, left: 4, width: 9, height: 9, borderRadius: "50%", background: "var(--accent-primary)", boxShadow: "var(--glow-strong)" }} />
-          </div>
+          <div style={{ position: "absolute", top: 0, bottom: 0, left: 8, width: 1, background: "var(--border-active)" }} />
+          {Array.from({ length: dotCount }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: "absolute",
+                top: `calc(${(i / (dotCount - 1)) * 100}% - 4px)`,
+                left: 4,
+                width: 9,
+                height: 9,
+                borderRadius: "50%",
+                background: "var(--accent-primary)",
+                boxShadow: "var(--glow-strong)",
+              }}
+            />
+          ))}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
           <Card
