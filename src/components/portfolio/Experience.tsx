@@ -102,6 +102,17 @@ export function Experience() {
             impact={{ percent: 18, label: "Compute cost reduction" }}
           />
           <Card
+            company="AWS Bedrock"
+            role="SDE Intern — Control Plane"
+            date="Jun 2025 – Aug 2025"
+            bullets={[
+              "Interned on the Bedrock Control Plane team, the neighboring team to Data Plane.",
+              "Shipped production features end-to-end and partnered with senior engineers on rollout safety and instrumentation.",
+              "Converted the internship into a full-time return offer on the Data Plane team.",
+            ]}
+            impact={{ percent: 100, label: "Return offer" }}
+          />
+          <Card
             company="Spectrax Corp"
             role="ML Engineering Intern"
             date="Summer 2023"
