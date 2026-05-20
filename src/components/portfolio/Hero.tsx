@@ -153,9 +153,9 @@ export function Hero() {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 36 }}>
           {[
-            ["01", "15–20% compute cost reduction @ Amazon"],
+            ["01", "15-20% compute cost reduction @ Amazon"],
             ["02", "72% prediction accuracy · UFC ML model"],
-            ["03", "2× peer-reviewed publications"],
+            ["03", "2x peer-reviewed publications"],
           ].map(([num, text], i) => (
             <span
               key={num}

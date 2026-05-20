@@ -1,6 +1,4 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-
-import appCss from "../styles.css?url";
+import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
 
 function NotFoundComponent() {
   return (
@@ -25,44 +23,9 @@ function NotFoundComponent() {
 }
 
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Neha L Senthil — ML Engineer · Duke MSCS" },
-      { name: "description", content: "Neha L Senthil — AI/ML Engineer, AWS ML Specialist, Amazon SDE, Duke MSCS '25. Building ML systems that think faster than the cloud can catch up." },
-      { name: "author", content: "Neha L Senthil" },
-      { property: "og:title", content: "Neha L Senthil — ML Engineer" },
-      { property: "og:description", content: "AI/ML Engineer · Duke MSCS · AWS ML Specialist · Amazon SDE · Published Researcher." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-    ],
-  }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
 });
-
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
 
 function RootComponent() {
   return <Outlet />;

@@ -104,8 +104,8 @@ export function Experience() {
           <Card
             glow
             company="AWS Bedrock"
-            role="Software Developer — Data Plane"
-            date="Present"
+            role="Software Developer ᯓ➤ Data Plane"
+            date="April 2026 - Present"
             bullets={[
               "Developer on the Bedrock Data Plane team working across AWS Textract and BDA Rekognition.",
               "Build and operate document and vision inference services running production traffic at AWS scale.",
@@ -114,9 +114,20 @@ export function Experience() {
             impact={{ percent: 18, label: "Compute cost reduction" }}
           />
           <Card
+            company="University Teaching"
+            role="Data Science Teaching Assistant"
+            date="1 semester"
+            bullets={[
+              "TA for the undergraduate Data Science course, leading 2 sections end-to-end.",
+              "Taught probability, statistical inference, regression, and the full ML modeling workflow.",
+              "Held weekly office hours and built supplemental material — earned strong student reviews for depth and clarity.",
+            ]}
+            impact={{ percent: 100, label: "Course mastery" }}
+          />
+          <Card
             company="AWS Bedrock"
-            role="SDE Intern — Control Plane"
-            date="Jun 2025 – Aug 2025"
+            role="SDE Intern ᯓ➤ Control Plane"
+            date="Jun 2025 - Aug 2025"
             bullets={[
               "Interned on the Bedrock Control Plane team, the neighboring team to Data Plane.",
               "Shipped production features end-to-end and partnered with senior engineers on rollout safety and instrumentation.",
@@ -127,24 +138,13 @@ export function Experience() {
           <Card
             company="Spectrax Corp"
             role="ML Engineering Intern"
-            date="Summer 2023"
+            date="Summer 2022 & 2023"
             bullets={[
               "Built feature pipelines and forecasting models for time-series operational data.",
               "Improved short-horizon forecast accuracy by 12% over the existing baseline.",
               "Owned the eval harness and weekly model review cadence with stakeholders.",
             ]}
             impact={{ percent: 12, label: "Forecast accuracy lift" }}
-          />
-          <Card
-            company="University Teaching"
-            role="Data Science Teaching Assistant"
-            date="2 semesters"
-            bullets={[
-              "TA for the undergraduate Data Science course, leading 2 sections end-to-end.",
-              "Taught probability, statistical inference, regression, and the full ML modeling workflow.",
-              "Held weekly office hours and built supplemental material — earned strong student reviews for depth and clarity.",
-            ]}
-            impact={{ percent: 100, label: "Course mastery" }}
           />
         </div>
       </div>

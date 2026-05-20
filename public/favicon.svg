@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <!-- Glossy dark sphere gradient -->
+    <radialGradient id="sphere" cx="38%" cy="28%" r="72%">
+      <stop offset="0%"   stop-color="#1e3535"/>
+      <stop offset="40%"  stop-color="#0c1d1d"/>
+      <stop offset="100%" stop-color="#040c0c"/>
+    </radialGradient>
+
+    <!-- Specular gloss highlight -->
+    <radialGradient id="gloss" cx="36%" cy="18%" r="52%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.28)"/>
+      <stop offset="55%"  stop-color="rgba(255,255,255,0.05)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+
+    <!-- Outer ambient glow -->
+    <filter id="halo" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4"/>
+    </filter>
+
+    <!-- Ring blur layer -->
+    <filter id="ringGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5"/>
+    </filter>
+
+    <!-- Symbol neon glow -->
+    <filter id="neon" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.2" result="blur"/>
+      <feFlood flood-color="#00e5c3" flood-opacity="0.7" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Ambient teal halo behind sphere -->
+  <circle cx="50" cy="50" r="48" fill="#00e5c3" opacity="0.18" filter="url(#halo)"/>
+
+  <!-- Main sphere -->
+  <circle cx="50" cy="50" r="46" fill="url(#sphere)"/>
+
+  <!-- Neon ring — blurred glow layer -->
+  <circle cx="50" cy="50" r="45.5" fill="none" stroke="#00e5c3" stroke-width="3.5" opacity="0.35" filter="url(#ringGlow)"/>
+
+  <!-- Neon ring — crisp layer -->
+  <circle cx="50" cy="50" r="45.5" fill="none" stroke="#00e5c3" stroke-width="1.8"/>
+
+  <!-- Inner subtle ring -->
+  <circle cx="50" cy="50" r="40" fill="none" stroke="#00e5c3" stroke-width="0.6" opacity="0.2"/>
+
+  <!-- Gloss overlay -->
+  <circle cx="50" cy="50" r="46" fill="url(#gloss)"/>
+
+  <!-- </> symbol -->
+  <g filter="url(#neon)" stroke="#00e5c3" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- < -->
+    <polyline points="30,36 16,50 30,64"/>
+    <!-- / -->
+    <line x1="45" y1="66" x2="55" y2="34"/>
+    <!-- > -->
+    <polyline points="70,36 84,50 70,64"/>
+  </g>
+</svg>

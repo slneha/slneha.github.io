@@ -30,8 +30,8 @@ export function Nav() {
           gap: 24,
         }}
       >
-        <a href="#home" className="font-display" style={{ fontWeight: 800, letterSpacing: "-0.02em", color: "var(--text-primary)", fontSize: "0.95rem" }}>
-          NLS<span style={{ color: "var(--accent-primary)" }}>.</span>
+        <a href="#home" className="font-mono" style={{ fontWeight: 500, letterSpacing: "0.02em", color: "var(--text-primary)", fontSize: "0.9rem" }}>
+          <span style={{ color: "var(--accent-primary)" }}>&lt;</span>slneha<span style={{ color: "var(--accent-primary)" }}> /&gt;</span>
         </a>
         <div className="nav-items" style={{ display: "flex", gap: 28 }}>
           {items.map((it) => (
@@ -50,7 +50,7 @@ export function Nav() {
             }}
           />
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.15em", color: "var(--accent-primary)" }}>
-            OPEN TO WORK
+            OPEN TO NETWORK
           </span>
         </div>
       </div>
