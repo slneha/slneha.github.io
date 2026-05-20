@@ -345,6 +345,7 @@ export function Projects() {
       </div>
 
       <div
+        className="projects-meta"
         style={{
           display: "flex",
           gap: 16,

@@ -23,6 +23,7 @@ export function Hero() {
   return (
     <section
       id="home"
+      className="hero-section"
       style={{
         position: "relative",
         minHeight: "100vh",
@@ -36,6 +37,7 @@ export function Hero() {
 
       {/* Interactive 3D terminal cube — drag to rotate */}
       <div
+        className="hero-cube"
         style={{
           position: "absolute",
           right: "-4vw",
@@ -54,6 +56,7 @@ export function Hero() {
       {/* Faint SVG neural net overlay */}
       <svg
         viewBox="0 0 600 600"
+        className="hero-net"
         style={{
           position: "absolute",
           right: "-5vw",
@@ -139,7 +142,7 @@ export function Hero() {
         </h1>
 
         <p
-          className="font-mono word-reveal"
+          className="font-mono word-reveal hero-tagline"
           style={{
             animationDelay: "1500ms",
             marginTop: 36,
@@ -151,7 +154,7 @@ export function Hero() {
           Duke MSCS · AWS ML Specialist · Amazon SDE · Published Researcher
         </p>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 36 }}>
+        <div className="hero-chips" style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 36 }}>
           {[
             ["01", "15-20% compute cost reduction @ Amazon"],
             ["02", "72% prediction accuracy · UFC ML model"],
@@ -171,6 +174,7 @@ export function Hero() {
 
       {/* Scroll indicator */}
       <div
+        className="scroll-indicator"
         style={{
           position: "absolute",
           bottom: 40,

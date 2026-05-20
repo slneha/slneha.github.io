@@ -40,7 +40,7 @@ export function Nav() {
             </a>
           ))}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="nav-status" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span
             className="pulse-dot"
             style={{

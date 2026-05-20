@@ -368,3 +368,53 @@
 }
 .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 .scroll-dot { animation: scroll-dot 2s ease-in-out infinite; }
+
+/* === Mobile refinements (visual only) === */
+@media (max-width: 768px) {
+  body {
+    cursor: auto;
+  }
+  .custom-cursor { display: none !important; }
+  .nav-status { display: none !important; }
+
+  /* Hero */
+  :root {
+    --type-hero: clamp(2.6rem, 11vw, 4rem);
+  }
+  .hero-section {
+    padding: 110px 6vw 80px !important;
+    min-height: auto !important;
+    align-items: flex-start !important;
+  }
+  .hero-cube,
+  .hero-net { display: none !important; }
+  .hero-tagline { font-size: 0.7rem !important; letter-spacing: 0.06em !important; }
+  .hero-chips .chip { font-size: 0.65rem !important; padding: 4px 10px !important; }
+  .hero-section .scroll-indicator { display: none !important; }
+
+  /* Experience timeline collapses on mobile */
+  .experience-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  .experience-timeline { display: none !important; }
+  .card-base .card-inner { padding: 22px !important; }
+
+  /* Section number watermark — keep small and out of the way */
+  .section-watermark { font-size: 4rem !important; top: 16px !important; }
+
+  /* Contact */
+  .contact-section { padding: 80px 6vw 60px !important; }
+  .contact-footer {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    margin-top: 60px !important;
+  }
+
+  /* Projects controls */
+  .projects-meta { flex-wrap: wrap; gap: 8px !important; font-size: 0.6rem !important; }
+
+  /* Cards hover-lift can feel sticky on touch */
+  .card-base:hover { transform: none; }
+}
