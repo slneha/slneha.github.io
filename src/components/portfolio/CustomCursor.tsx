@@ -38,7 +38,7 @@ export function CustomCursor() {
   }, []);
 
   return (
-    <>
+    <div className="custom-cursor">
       <div
         ref={dotRef}
         style={{
@@ -74,6 +74,6 @@ export function CustomCursor() {
           opacity: hover ? 1 : 0.4,
         }}
       />
-    </>
+    </div>
   );
 }
