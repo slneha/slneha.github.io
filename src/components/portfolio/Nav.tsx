@@ -20,6 +20,7 @@ export function Nav() {
       }}
     >
       <div
+        className="nav-inner"
         style={{
           maxWidth: 1400,
           margin: "0 auto",
@@ -35,7 +36,7 @@ export function Nav() {
         </a>
         <div className="nav-items" style={{ display: "flex", gap: 28 }}>
           {items.map((it) => (
-            <a key={it.href} href={it.href} className="nav-link">
+            <a key={it.href} href={it.href} className={`nav-link${it.href === "#home" ? " nav-home" : ""}`}>
               {it.label}
             </a>
           ))}

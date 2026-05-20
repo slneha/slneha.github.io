@@ -376,6 +376,8 @@
   }
   .custom-cursor { display: none !important; }
   .nav-status { display: none !important; }
+  .nav-inner { padding: 14px 5vw !important; }
+  .nav-home { display: none !important; }
 
   /* Hero */
   :root {
@@ -411,6 +413,13 @@
     text-align: center !important;
     margin-top: 60px !important;
   }
+
+  /* Research grid */
+  .research-grid { grid-template-columns: 1fr !important; }
+
+  /* Skills overflow */
+  .skills-row { white-space: normal !important; }
+  .skills-row > span:first-child { min-width: 0; flex: 1; }
 
   /* Projects controls */
   .projects-meta { flex-wrap: wrap; gap: 8px !important; font-size: 0.6rem !important; }

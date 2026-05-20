@@ -49,7 +49,7 @@ function Card({
 }) {
   return (
     <Reveal className={`card-base ${glow ? "glow-card" : ""}`}>
-      <div style={{ padding: glow ? 36 : 28 }}>
+      <div className="card-inner" style={{ padding: glow ? 36 : 28 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
           <div>
             <div className="font-mono" style={{ fontSize: "0.65rem", letterSpacing: "0.18em", color: "var(--accent-primary)", textTransform: "uppercase" }}>

@@ -65,7 +65,7 @@ export function Skills() {
         )}
         {lines.map((ln, i) => (
           shown >= i + 2 && (
-            <div key={ln.label} style={{ whiteSpace: "pre", display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div key={ln.label} className="skills-row" style={{ whiteSpace: "pre", display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <span>
                 <span style={{ color: "var(--accent-primary)" }}>&gt;</span> {pad(ln.label, 18)}
                 <span style={{ color: "var(--text-primary)" }}>{ln.items}</span>

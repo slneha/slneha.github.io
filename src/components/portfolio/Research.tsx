@@ -19,7 +19,7 @@ const papers = [
 export function Research() {
   return (
     <Section id="research" label="/research" number="03">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24 }}>
+      <div className="research-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
         {papers.map((p, i) => (
           <Reveal key={p.title} delay={i * 100}>
             <article

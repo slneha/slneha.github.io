@@ -25,7 +25,7 @@ export function Section({
     >
       <div
         aria-hidden
-        className="font-display"
+        className="font-display section-watermark"
         style={{
           position: "absolute",
           top: 40,
