@@ -4,6 +4,7 @@ export function Contact() {
   return (
     <section
       id="contact"
+      className="contact-section"
       style={{
         padding: "15vh 8vw",
         background: "var(--bg-primary)",
@@ -63,6 +64,7 @@ export function Contact() {
       </div>
 
       <footer
+        className="contact-footer"
         style={{
           marginTop: 100,
           paddingTop: 24,
