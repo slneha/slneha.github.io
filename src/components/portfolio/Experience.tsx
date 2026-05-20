@@ -81,8 +81,8 @@ export function Experience() {
   const dotCount = 4;
   return (
     <Section id="experience" label="/experience" number="01">
-      <div style={{ display: "grid", gridTemplateColumns: "60px 1fr", gap: 32 }}>
-        <div style={{ position: "relative" }}>
+      <div className="experience-grid" style={{ display: "grid", gridTemplateColumns: "60px 1fr", gap: 32 }}>
+        <div className="experience-timeline" style={{ position: "relative" }}>
           <div style={{ position: "absolute", top: 0, bottom: 0, left: 8, width: 1, background: "var(--border-active)" }} />
           {Array.from({ length: dotCount }).map((_, i) => (
             <div
